@@ -16,9 +16,13 @@ class Packet:
         for k, v in kwargs.items():
             setattr(self, k, v)
 
+    @property
+    def buffer(self):
+        return self.packet_buffer
+
     """ Ensure that the fields match the packet's definition """
     def assert_fields(self, **kwargs):
-        assert kwargs.keys() == self.definition.keys(), "Packet fields do not match definition!"
+        assert set(kwargs.keys()) == set(self.definition.keys()), "Packet fields do not match definition!"
 
     def write(self, compression_threshold=None):
         if self.id is None:
@@ -54,7 +58,7 @@ class Packet:
         for var_name, data_type in self.definition.items():
             """ Get the field's data """
             data = getattr(self, var_name)
-        length += data_type.write(data, packet_buffer)
+            length += data_type.write(data, packet_buffer)
         return length
 
     def send(self, socket):

@@ -198,8 +198,7 @@ class ShortPrefixedByteArray(Type):
 
     @staticmethod
     def write(value, stream):
-        Short.write(len(value), stream)
-        return stream.write(value)
+        return Short.write(len(value), stream) + stream.write(value)
 
 
 class VarIntPrefixedByteArray(Type):
@@ -210,8 +209,7 @@ class VarIntPrefixedByteArray(Type):
 
     @staticmethod
     def write(value, stream):
-        VarInt.write(len(value), stream)
-        return stream.write(struct.pack(str(len(value)) + "s", value))
+        return VarInt.write(len(value), stream) + stream.write(struct.pack(str(len(value)) + "s", value))
 
 
 class TrailingByteArray(Type):
@@ -236,8 +234,7 @@ class String(Type):
     @staticmethod
     def write(value, stream):
         value = value.encode('utf-8')
-        VarInt.write(len(value), stream)
-        return stream.write(value)
+        return VarInt.write(len(value), stream) + stream.write(value)
 
 
 class UUID(Type):
