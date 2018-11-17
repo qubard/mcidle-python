@@ -10,3 +10,4 @@ Goal is to port the golang version to python
     - authentication and encryption routines
     - pycraft has some good examples..
 - then write a listener thread which streams packets to a buffer for output from C->S
+- custom exceptions (for connectivity states)

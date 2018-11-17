@@ -1,5 +1,3 @@
-from src.networking.packets.serverbound import *
+from src.networking.connection import Connection
 
-
-print(KeepAlive(ID=4).write())
-print(EncryptionRequest(ServerId="test.org", PubKey="adsojdasjlkadsjkasdkj", Token="asdflkdslkfdslkfds").write(30))
+conn = Connection(ip='localhost', protocol=310, username="leddit").connect()

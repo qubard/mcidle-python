@@ -1,5 +1,4 @@
 import socket, select
-import time
 info = socket.getaddrinfo("localhost", 25565,
                           0, socket.SOCK_STREAM)
 
@@ -21,10 +20,9 @@ ssocket.connect(ai_addr)
 
 from src.networking.packets.serverbound import *
 
-time.sleep(3)
-
-ssocket.send(Handshake(ProtocolVersion=316, ServerAddress="localhost", ServerPort=25565, NextState=2).write().buffer.get_bytes())
-print(Handshake(ProtocolVersion=316, ServerAddress="localhost", ServerPort=25565, NextState=2).write())
+protocol = 340
+ssocket.send(Handshake(ProtocolVersion=protocol, ServerAddress="localhost", ServerPort=25565, NextState=2).write().buffer.get_bytes())
+print(Handshake(ProtocolVersion=protocol, ServerAddress="localhost", ServerPort=25565, NextState=2).write())
 ssocket.send(LoginStart(Name="leddit").write().buffer.get_bytes())
 print(LoginStart(Name="leddit").write())
 
@@ -32,9 +30,9 @@ file_object = ssocket.makefile("rb", 0)
 
 ready_to_read = select.select([file_object], [], [], 0.05)[0]
 
+from src.networking.types import *
+
 if ready_to_read:
-    byte = ssocket.recv(1024)
-    if len(byte) > 0:
-        print("Got data", byte)
+    print(VarInt.read(file_object))
 
 ssocket.close()

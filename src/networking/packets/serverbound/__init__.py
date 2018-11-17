@@ -1,16 +1,18 @@
 from src.networking.packets.packet import Packet
-from src.networking.types import String, Long, UnsignedShort, VarInt
+from src.networking.types import String, Long, UnsignedShort, VarInt, VarIntPrefixedByteArray
 
 """
  Note: not using an OrderedDict for `definition` will break
  in anything older than Python 3.7.1 (the keys will not be in order)
 """
 
+
 # Useful for mapping packet IDs to their respective classes
 def get_packets():
     return {
-        p.id: p for p in [KeepAlive, EncryptionRequest, LoginStart, Handshake]
+        packet.id: packet for packet in [KeepAlive, Handshake, LoginStart, EncryptionResponse]
     }
+
 
 class KeepAlive(Packet):
     id = 0x0E
@@ -29,17 +31,16 @@ class Handshake(Packet):
     }
 
 
-class EncryptionRequest(Packet):
-    id = 0x01
-    definition = {
-        "ServerId": String,
-        "PubKey": String,
-        "Token": String
-    }
-
-
 class LoginStart(Packet):
     id = 0x00
     definition = {
         "Name": String
+    }
+
+
+class EncryptionResponse(Packet):
+    id = 0x01
+    definition = {
+        "SharedSecret": VarIntPrefixedByteArray,
+        "VerifyToken": VarIntPrefixedByteArray
     }
