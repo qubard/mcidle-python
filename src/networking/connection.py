@@ -7,15 +7,6 @@ from .types import VarInt
 from .packets.serverbound import Handshake, LoginStart
 from .packets.packet_buffer import PacketBuffer
 
-""" 
-By far the best architecture is to assign a single thread to 
-each connection and have these threads handle the already
-connected socket's behaviour 
-
-This is basically the "adapter" design pattern and makes for
-extensibility to separate various connection states.
-"""
-
 
 class ConnectionThread(threading.Thread):
     def __init__(self, connection):
@@ -61,9 +52,9 @@ class LoginHandler(PacketHandler):
         super().__init__(connection)
 
     def initialize(self):
-        handshake = Handshake(ProtocolVersion=self.connection.protocol, ServerAddress="localhost", ServerPort=25565,
+        handshake = Handshake(ProtocolVersion=self.connection.protocol, ServerAddress=self.connection.address[0], ServerPort=self.connection.address[1],
                               NextState=2)
-        login_start = LoginStart(Name="leddit")
+        login_start = LoginStart(Name=self.connection.username)
 
         self.connection.socket.send(handshake.write().buffer.get_bytes())
         self.connection.socket.send(login_start.write().buffer.get_bytes())
@@ -82,6 +73,7 @@ class Connection:
     def __init__(self, username, ip, protocol, port=25565, access_token=None):
         self.socket = socket.socket()
         self.stream = self.socket.makefile('rb')
+        self.username = username
         self.address = (ip, port)
         self.encrypted = False
         self.compression = None
