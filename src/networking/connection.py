@@ -31,14 +31,13 @@ class PacketHandler:
     def initialize(self):
         pass
 
-    """ Read an entire packet into a packet buffer """
-    def read_packet(self):
+    """ Read the next packet into a packet buffer """
+    def read_packet_buffer(self):
         packet_buffer = PacketBuffer()
         length = VarInt.read(self.connection.stream)
         data = self.connection.stream.read(length)
         VarInt.write(length, packet_buffer)
-        packet_buffer.write(self.connection.stream.read(length))
-        print("Read length", length, "data", data, "buffer", packet_buffer)
+        packet_buffer.write(data)
         return packet_buffer
 
     """ Default behaviour is to consume packets """
@@ -60,7 +59,8 @@ class LoginHandler(PacketHandler):
         self.connection.socket.send(login_start.write().buffer.get_bytes())
 
     def handle(self):
-        self.read_packet()
+        packet_buffer = self.read_packet_buffer()
+        print(packet_buffer)
 
 
 class IdleHandler(PacketHandler):
