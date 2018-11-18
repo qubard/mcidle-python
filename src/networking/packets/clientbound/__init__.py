@@ -29,7 +29,6 @@ class EncryptionRequest(Packet):
 
     def read(self, packet_buffer):
         self.packet_buffer = packet_buffer
-        length = VarInt.read(packet_buffer)
         self.ServerID = String.read(packet_buffer)
         self.PublicKey = VarIntPrefixedByteArray.read(packet_buffer)
         self.VerifyToken = VarIntPrefixedByteArray.read(packet_buffer)

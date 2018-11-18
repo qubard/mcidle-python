@@ -33,11 +33,12 @@ class PacketHandler:
         pass
 
     """ Read the next packet into a packet buffer """
-    def read_packet_buffer(self):
+    def read_packet_buffer(self, write_length=False):
         packet_buffer = PacketBuffer()
         length = VarInt.read(self.connection.stream)
         data = self.connection.stream.read(length)
-        VarInt.write(length, packet_buffer)
+        if write_length:
+            VarInt.write(length, packet_buffer)
         packet_buffer.write(data)
         packet_buffer.reset_cursor()
         return packet_buffer
