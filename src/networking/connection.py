@@ -75,10 +75,10 @@ class IdleHandler(PacketHandler):
 class Connection:
     def __init__(self, username, ip, protocol, port=25565, access_token=None):
         self.socket = socket.socket()
+        """ Create a readable only file interface (stream) for the socket """
         self.stream = self.socket.makefile('rb')
         self.username = username
         self.address = (ip, port)
-        self.encrypted = False
         self.compression = None
         self.protocol = protocol
 

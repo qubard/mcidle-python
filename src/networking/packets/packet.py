@@ -3,6 +3,7 @@ from src.networking.types import VarInt
 from zlib import compress
 from base64 import b64encode
 
+
 class Packet:
     id = None
     definition = None
@@ -22,7 +23,14 @@ class Packet:
 
     """ Ensure that the fields match the packet's definition """
     def assert_fields(self, **kwargs):
-        assert set(kwargs.keys()) == set(self.definition.keys()), "Packet fields do not match definition!"
+        assert not kwargs or set(kwargs.keys()) == set(self.definition.keys()), "Packet fields do not match definition!"
+
+    """ Read from the packet buffer into the packet's fields """
+    def read(self, packet_buffer):
+        self.packet_buffer = packet_buffer
+        for var_name, data_type in self.definition.items():
+            setattr(self, var_name, data_type.read(packet_buffer))
+        return self
 
     def write(self, compression_threshold=None):
         if self.id is None:
