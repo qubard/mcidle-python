@@ -6,6 +6,7 @@ from .types import VarInt
 
 from .packets.serverbound import Handshake, LoginStart
 from .packets.packet_buffer import PacketBuffer
+from .packets.clientbound import EncryptionRequest
 
 
 class ConnectionThread(threading.Thread):
@@ -19,7 +20,7 @@ class ConnectionThread(threading.Thread):
     def run(self):
         if self.packet_handler is not None:
             self.packet_handler.initialize()
-            self.packet_handler.handle()
+            self.packet_handler.handle(self.packet_handler.read_packet_buffer())
 
 
 class PacketHandler:
@@ -38,10 +39,11 @@ class PacketHandler:
         data = self.connection.stream.read(length)
         VarInt.write(length, packet_buffer)
         packet_buffer.write(data)
+        packet_buffer.reset_cursor()
         return packet_buffer
 
     """ Default behaviour is to consume packets """
-    def handle(self):
+    def handle(self, packet_buffer):
         pass
 
 
@@ -58,9 +60,9 @@ class LoginHandler(PacketHandler):
         self.connection.socket.send(handshake.write().buffer.get_bytes())
         self.connection.socket.send(login_start.write().buffer.get_bytes())
 
-    def handle(self):
-        packet_buffer = self.read_packet_buffer()
-        print(packet_buffer)
+    def handle(self, packet_buffer):
+        encryption_request = EncryptionRequest().read(packet_buffer)
+        print(encryption_request)
 
 
 class IdleHandler(PacketHandler):

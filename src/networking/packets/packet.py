@@ -1,7 +1,7 @@
 from .packet_buffer import PacketBuffer
 from src.networking.types import VarInt
 from zlib import compress
-
+from base64 import b64encode
 
 class Packet:
     id = None
@@ -69,6 +69,10 @@ class Packet:
             of this packet. Override to customise field value representation.
         """
         value = getattr(self, field, None)
+
+        if isinstance(value, bytes) or isinstance(value, bytearray):
+            return b64encode(value).decode("utf-8")
+
         return repr(value)
 
     @property
@@ -85,7 +89,7 @@ class Packet:
         fields = self.fields
         if fields is not None:
             _str = '%s(%s)' % (_str, ', '.join('%s=%s' %
-                                               (a, self.field_string(a)) for a in fields))
+                                               (k, self.field_string(k)) for k in fields))
         _str += " | " + str(self.packet_buffer)
         return _str
 

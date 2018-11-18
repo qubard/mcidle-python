@@ -22,6 +22,19 @@ class EncryptionRequest(Packet):
         "VerifyToken": VarIntPrefixedByteArray
     }
 
+    def __init__(self):
+        self.ServerID = None
+        self.PublicKey = None
+        self.VerifyToken = None
+
+    def read(self, packet_buffer):
+        self.packet_buffer = packet_buffer
+        length = VarInt.read(packet_buffer)
+        self.ServerID = String.read(packet_buffer)
+        self.PublicKey = VarIntPrefixedByteArray.read(packet_buffer)
+        self.VerifyToken = VarIntPrefixedByteArray.read(packet_buffer)
+        return self
+
 
 class LoginSuccess(Packet):
     id = 0x02
