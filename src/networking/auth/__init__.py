@@ -256,9 +256,9 @@ class Auth:
                              "selectedProfile": self.profile.to_dict(),
                              "serverId": server_id_hash})
 
-
         if res.status_code != 204:
             _raise_from_response(res)
+
         return True
 
 

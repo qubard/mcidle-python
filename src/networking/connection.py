@@ -71,6 +71,14 @@ class LoginHandler(PacketHandler):
         (encrypted_token, encrypted_secret) = encrypt_token_and_secret(encryption_request.PublicKey, encryption_request.VerifyToken, shared_secret)
         encryption_response = EncryptionResponse(SharedSecret=encrypted_secret, VerifyToken=encrypted_token)
 
+        # Generate an auth token
+        server_id_hash = generate_verification_hash(encryption_request.ServerID, shared_secret,
+                                                    encryption_request.PublicKey)
+
+        # Client auth
+        self.connection.auth.authenticate()
+        self.connection.auth.join(server_id_hash)
+
         # Send the encryption response
         self.connection.socket.send(encryption_response.write().bytes)
 
@@ -82,17 +90,9 @@ class LoginHandler(PacketHandler):
         self.connection.socket = EncryptedSocketWrapper(self.connection.socket, encryptor, decryptor)
         self.connection.stream = EncryptedFileObjectWrapper(self.connection.stream, decryptor)
 
-        # Generate an auth token
-        self.connection.auth.authenticate()
-
-        if self.connection.auth.validate():
-            server_id_hash = generate_verification_hash(encryption_request.ServerID, shared_secret, encryption_request.PublicKey)
-            self.connection.auth.join(server_id_hash)
-
-            # Now packets are encrypted, so we can switch states after reading the decrypted login success
-            packet_buffer = self.read_packet_buffer()
-            login_start = LoginStart().read(packet_buffer)
-            print(login_start)
+        # Now packets are encrypted, so we can switch states after reading the decrypted login success
+        packet_buffer = self.read_packet_buffer()
+        login_start = LoginStart().read(packet_buffer)
 
 
 class IdleHandler(PacketHandler):
