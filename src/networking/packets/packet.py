@@ -18,6 +18,10 @@ class Packet:
             setattr(self, k, v)
 
     @property
+    def bytes(self):
+        return self.packet_buffer.get_bytes()
+
+    @property
     def buffer(self):
         return self.packet_buffer
 
@@ -29,7 +33,8 @@ class Packet:
     def read(self, packet_buffer):
         self.packet_buffer = packet_buffer
         for var_name, data_type in self.definition.items():
-            setattr(self, var_name, data_type.read(packet_buffer))
+            val = data_type.read(packet_buffer)
+            setattr(self, var_name, val)
         return self
 
     def write(self, compression_threshold=None):

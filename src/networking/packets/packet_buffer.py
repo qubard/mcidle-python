@@ -2,6 +2,7 @@ from io import BytesIO
 
 
 class PacketBuffer:
+    """ Wrapper around BytesIO """
     def __init__(self):
         self.bytes = BytesIO()
 

@@ -4,9 +4,10 @@ import threading
 from .auth import Auth
 from .types import VarInt
 
-from .packets.serverbound import Handshake, LoginStart
+from .packets.serverbound import Handshake, LoginStart, EncryptionResponse
 from .packets.packet_buffer import PacketBuffer
 from .packets.clientbound import EncryptionRequest
+from .encryption import *
 
 
 class ConnectionThread(threading.Thread):
@@ -58,12 +59,40 @@ class LoginHandler(PacketHandler):
                               NextState=2)
         login_start = LoginStart(Name=self.connection.username)
 
-        self.connection.socket.send(handshake.write().buffer.get_bytes())
-        self.connection.socket.send(login_start.write().buffer.get_bytes())
+        self.connection.socket.send(handshake.write().bytes)
+        self.connection.socket.send(login_start.write().bytes)
 
+    """ Do all the authentication and logging in"""
     def handle(self, packet_buffer):
         encryption_request = EncryptionRequest().read(packet_buffer)
-        print(encryption_request)
+
+        # Generate the encryption response to send over
+        shared_secret = generate_shared_secret()
+        (encrypted_token, encrypted_secret) = encrypt_token_and_secret(encryption_request.PublicKey, encryption_request.VerifyToken, shared_secret)
+        encryption_response = EncryptionResponse(SharedSecret=encrypted_secret, VerifyToken=encrypted_token)
+
+        # Send the encryption response
+        self.connection.socket.send(encryption_response.write().bytes)
+
+        # Enable encryption over the socket
+        cipher = create_AES_cipher(shared_secret)
+        encryptor = cipher.encryptor()
+        decryptor = cipher.decryptor()
+
+        self.connection.socket = EncryptedSocketWrapper(self.connection.socket, encryptor, decryptor)
+        self.connection.stream = EncryptedFileObjectWrapper(self.connection.stream, decryptor)
+
+        # Generate an auth token
+        self.connection.auth.authenticate()
+
+        if self.connection.auth.validate():
+            server_id_hash = generate_verification_hash(encryption_request.ServerID, shared_secret, encryption_request.PublicKey)
+            self.connection.auth.join(server_id_hash)
+
+            # Now packets are encrypted, so we can switch states after reading the decrypted login success
+            packet_buffer = self.read_packet_buffer()
+            login_start = LoginStart().read(packet_buffer)
+            print(login_start)
 
 
 class IdleHandler(PacketHandler):
@@ -73,7 +102,7 @@ class IdleHandler(PacketHandler):
 
 
 class Connection:
-    def __init__(self, username, ip, protocol, port=25565, access_token=None):
+    def __init__(self, username, ip, protocol, port=25565, access_token=None, client_token=None):
         self.socket = socket.socket()
         """ Create a readable only file interface (stream) for the socket """
         self.stream = self.socket.makefile('rb')
@@ -82,7 +111,7 @@ class Connection:
         self.compression = None
         self.protocol = protocol
 
-        self.auth = Auth(username, access_token)
+        self.auth = Auth(username, access_token, client_token)
 
         self.connection_thread = ConnectionThread(self)
 

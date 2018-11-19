@@ -7,6 +7,7 @@ from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 
 """ Boilerplate from https://github.com/ammaraskar/pyCraft/blob/745aa054b01e74905d64e3e3d649ccc163abab64/minecraft/networking/encryption.py"""
 
+
 def generate_shared_secret():
     return os.urandom(16)
 

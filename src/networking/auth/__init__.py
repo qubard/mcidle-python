@@ -9,6 +9,35 @@ SESSION_SERVER = "https://sessionserver.mojang.com/session/minecraft"
 CONTENT_TYPE = "application/json"
 HEADERS = {"content-type": CONTENT_TYPE}
 
+
+class Profile(object):
+    """
+    Container class for a MineCraft Selected profile.
+    See: `<http://wiki.vg/Authentication>`_
+    """
+    def __init__(self, id_=None, name=None):
+        self.id_ = id_
+        self.name = name
+
+    def to_dict(self):
+        """
+        Returns ``self`` in dictionary-form, which can be serialized by json.
+        """
+        if self:
+            return {"id": self.id_,
+                    "name": self.name}
+        else:
+            raise AttributeError("Profile is not yet populated.")
+
+    def __bool__(self):
+        bool_state = self.id_ is not None and self.name is not None
+        return bool_state
+
+    # Python 2 support
+    def __nonzero__(self):
+        return self.__bool__()
+
+
 class Auth:
     """
     Represents an authentication token.
@@ -35,6 +64,10 @@ class Auth:
         self.username = username
         self.access_token = access_token
         self.client_token = client_token
+        self.profile = Profile()
+
+    def __str__(self):
+        return "%s %s %s" % (self.username, self.access_token, self.client_token)
 
     @property
     def authenticated(self):
@@ -199,7 +232,7 @@ class Auth:
             _raise_from_response(res)
         return True
 
-    def join(self, server_id):
+    def join(self, server_id_hash):
         """
         Informs the Mojang session-server that we're joining the
         MineCraft server with id ``server_id``.
@@ -221,7 +254,8 @@ class Auth:
         res = _make_request(SESSION_SERVER, "join",
                             {"accessToken": self.access_token,
                              "selectedProfile": self.profile.to_dict(),
-                             "serverId": server_id})
+                             "serverId": server_id_hash})
+
 
         if res.status_code != 204:
             _raise_from_response(res)
