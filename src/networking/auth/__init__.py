@@ -49,7 +49,7 @@ class Auth:
     AGENT_NAME = "Minecraft"
     AGENT_VERSION = 1
 
-    def __init__(self, username=None, access_token=None, client_token=None):
+    def __init__(self, username=None, profile=None):
         """
         Constructs an `AuthenticationToken` based on `access_token` and
         `client_token`.
@@ -62,9 +62,19 @@ class Auth:
             A `AuthenticationToken` with `access_token` and `client_token` set.
         """
         self.username = username
-        self.access_token = access_token
-        self.client_token = client_token
         self.profile = Profile()
+
+        self.access_token = None
+        self.client_token = None
+
+        if profile:
+            self.assign_profile(profile)
+
+    def assign_profile(self, json_resp):
+        self.access_token = json_resp["accessToken"]
+        self.client_token = json_resp["clientToken"]
+        self.profile.id_ = json_resp["selectedProfile"]["id"]
+        self.profile.name = json_resp["selectedProfile"]["name"]
 
     def __str__(self):
         return "%s %s %s" % (self.username, self.access_token, self.client_token)

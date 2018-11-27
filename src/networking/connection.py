@@ -6,7 +6,7 @@ from .types import VarInt
 
 from .packets.serverbound import Handshake, LoginStart, EncryptionResponse
 from .packets.packet_buffer import PacketBuffer
-from .packets.clientbound import EncryptionRequest
+from .packets.clientbound import EncryptionRequest, SetCompression, LoginSuccess
 from .encryption import *
 
 
@@ -71,12 +71,11 @@ class LoginHandler(PacketHandler):
         (encrypted_token, encrypted_secret) = encrypt_token_and_secret(encryption_request.PublicKey, encryption_request.VerifyToken, shared_secret)
         encryption_response = EncryptionResponse(SharedSecret=encrypted_secret, VerifyToken=encrypted_token)
 
-        # Generate an auth token
+        # Generate an auth token, serverID is always empty
         server_id_hash = generate_verification_hash(encryption_request.ServerID, shared_secret,
                                                     encryption_request.PublicKey)
 
         # Client auth
-        self.connection.auth.authenticate()
         self.connection.auth.join(server_id_hash)
 
         # Send the encryption response
@@ -92,8 +91,8 @@ class LoginHandler(PacketHandler):
 
         # Now packets are encrypted, so we can switch states after reading the decrypted login success
         packet_buffer = self.read_packet_buffer()
-        login_start = LoginStart().read(packet_buffer)
-
+        set_compression = SetCompression().read(packet_buffer)
+        print(set_compression.Threshold)
 
 class IdleHandler(PacketHandler):
     """ Idling occurs when we've disconnected our client or have yet to connect """
@@ -102,7 +101,7 @@ class IdleHandler(PacketHandler):
 
 
 class Connection:
-    def __init__(self, username, ip, protocol, port=25565, access_token=None, client_token=None):
+    def __init__(self, username, ip, protocol, port=25565, profile=None):
         self.socket = socket.socket()
         """ Create a readable only file interface (stream) for the socket """
         self.stream = self.socket.makefile('rb')
@@ -111,7 +110,10 @@ class Connection:
         self.compression = None
         self.protocol = protocol
 
-        self.auth = Auth(username, access_token, client_token)
+        self.auth = Auth(username, profile)
+
+        # Make sure the access token we are using is still valid
+        self.auth.validate()
 
         self.connection_thread = ConnectionThread(self)
 

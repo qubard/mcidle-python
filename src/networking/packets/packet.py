@@ -32,6 +32,7 @@ class Packet:
     """ Read from the packet buffer into the packet's fields """
     def read(self, packet_buffer):
         self.packet_buffer = packet_buffer
+        assert(VarInt.read(packet_buffer) == self.id)
         for var_name, data_type in self.definition.items():
             val = data_type.read(packet_buffer)
             setattr(self, var_name, val)

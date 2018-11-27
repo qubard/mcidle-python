@@ -12,3 +12,4 @@ Goal is to port the golang version to python
 - then write a listener thread which streams packets to a buffer for output from C->S
 - custom exceptions (for connectivity states)
 - not handling edge cases where there is no encryption
+- `auth.json` (store/read auth credentials)
