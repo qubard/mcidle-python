@@ -2,7 +2,7 @@ import socket
 import threading
 
 from .auth import Auth
-from .packet_handler import *
+from src.networking.packet_handler.serverbound import LoginHandler
 
 
 class MinecraftConnection(threading.Thread):

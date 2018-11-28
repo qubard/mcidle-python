@@ -1,56 +1,7 @@
-from zlib import decompress
-from .types import VarInt
-
-from .packets.serverbound import Handshake, LoginStart, EncryptionResponse
-from .packets.packet_buffer import PacketBuffer
-from .packets.clientbound import EncryptionRequest, SetCompression, LoginSuccess
-from .encryption import *
-
-
-class PacketHandler:
-    """ Generic packet handler responsible for processing incoming packets """
-    def __init__(self, connection):
-        self.connection = connection
-
-    """ We can't receive or handle packets until we've done basic initialization """
-    def initialize(self):
-        pass
-
-    """ Read the next packet into a packet buffer """
-    def read_packet_buffer(self, write_length=False):
-        packet_buffer = PacketBuffer()
-        length = VarInt.read(self.connection.stream)
-
-        data = self.connection.stream.read(length)
-
-        # Decompress if needed
-        if self.connection.threshold:
-            compressed_buf = PacketBuffer()
-            compressed_buf.write(data)
-            compressed_buf.reset_cursor() # Need to reset to read off the compression byte(s)
-
-            decompressed_length = VarInt.read(compressed_buf)
-            is_compressed = decompressed_length > 0
-
-            # Chop off the compression byte(s)
-            data = compressed_buf.read()
-
-            if is_compressed:
-                # Read all the remaining bytes past the compression indicator into the packet buffer
-                data = decompress(data)
-                assert(len(data) == decompressed_length)
-
-        if write_length:
-            VarInt.write(length, packet_buffer)
-
-        packet_buffer.write(data)
-        packet_buffer.reset_cursor()
-
-        return packet_buffer
-
-    """ Default behaviour is to consume packets """
-    def handle(self, packet_buffer):
-        pass
+from src.networking.packets.serverbound import Handshake, LoginStart, EncryptionResponse
+from src.networking.packets.clientbound import EncryptionRequest, SetCompression, LoginSuccess
+from src.networking.encryption import *
+from src.networking.packet_handler import PacketHandler
 
 
 class LoginHandler(PacketHandler):
