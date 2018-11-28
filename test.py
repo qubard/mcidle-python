@@ -1,4 +1,7 @@
-from src.networking.connection import Connection
+from src.networking.connection import MinecraftConnection, MinecraftServer
 
-conn = Connection(ip="localhost", protocol=340, username="leddit", \
-                  profile={}).connect()
+conn = MinecraftConnection(ip="localhost", protocol=340, username="leddit", \
+                  profile={}).start()
+
+server = MinecraftServer(port=1337)
+server.start()

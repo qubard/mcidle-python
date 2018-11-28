@@ -12,20 +12,6 @@ from .encryption import *
 from zlib import decompress
 
 
-class ConnectionThread(threading.Thread):
-    def __init__(self, connection):
-        threading.Thread.__init__(self)
-        self.packet_handler = LoginHandler(connection)
-
-    def set_packet_handler(self, packet_handler):
-        self.packet_handler = packet_handler
-
-    def run(self):
-        if self.packet_handler is not None:
-            self.packet_handler.initialize()
-            self.packet_handler.handle(self.packet_handler.read_packet_buffer())
-
-
 class PacketHandler:
     """ Generic packet handler responsible for processing incoming packets """
     def __init__(self, connection):
@@ -86,8 +72,8 @@ class LoginHandler(PacketHandler):
         self.connection.socket.send(login_start.write().bytes)
 
     """ Do all the authentication and logging in"""
-    def handle(self, packet_buffer):
-        encryption_request = EncryptionRequest().read(packet_buffer)
+    def handle(self):
+        encryption_request = EncryptionRequest().read(self.read_packet_buffer())
 
         # Generate the encryption response to send over
         shared_secret = generate_shared_secret()
@@ -109,6 +95,7 @@ class LoginHandler(PacketHandler):
         encryptor = cipher.encryptor()
         decryptor = cipher.decryptor()
 
+        # Replace the socket used with an encrypted socket
         self.connection.socket = EncryptedSocketWrapper(self.connection.socket, encryptor, decryptor)
         self.connection.stream = EncryptedFileObjectWrapper(self.connection.stream, decryptor)
 
@@ -116,7 +103,8 @@ class LoginHandler(PacketHandler):
         self.connection.threshold = SetCompression().read(self.read_packet_buffer()).Threshold
 
         login_success = LoginSuccess().read(self.read_packet_buffer())
-        print(login_success)
+        print(login_success, flush=True)
+
 
 class IdleHandler(PacketHandler):
     """ Idling occurs when we've disconnected our client or have yet to connect """
@@ -124,8 +112,9 @@ class IdleHandler(PacketHandler):
         super().__init__(self)
 
 
-class Connection:
+class MinecraftConnection(threading.Thread):
     def __init__(self, username, ip, protocol, port=25565, profile=None):
+        threading.Thread.__init__(self)
         self.socket = socket.socket()
         """ Create a readable only file interface (stream) for the socket """
         self.stream = self.socket.makefile('rb')
@@ -139,9 +128,34 @@ class Connection:
         # Make sure the access token we are using is still valid
         self.auth.validate()
 
-        self.connection_thread = ConnectionThread(self)
+        self.packet_handler = LoginHandler(self)
+
+    def run(self):
+        self.connect()
+        if self.packet_handler is not None:
+            self.packet_handler.initialize()
+            self.packet_handler.handle()
 
     """ Connect to the socket and start a connection thread """
     def connect(self):
         self.socket.connect(self.address)
-        self.connection_thread.start()
+        print("Connected", flush=True)
+
+
+class MinecraftServer(threading.Thread):
+    """ Used for listening on a port for a connection """
+    def __init__(self, port=25565):
+        threading.Thread.__init__(self)
+        self.socket = socket.socket()
+        self.address = ('localhost', port)
+        self.port = port
+
+    def run(self):
+        self.socket.bind(self.address)
+        self.socket.listen(1) # Listen for 1 incoming connection
+
+        print("Waiting for client", flush=True)
+
+        (connection, address) = self.socket.accept()
+
+        print("Got client", connection, address, flush=True)
