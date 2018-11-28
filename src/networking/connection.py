@@ -9,6 +9,8 @@ from .packets.packet_buffer import PacketBuffer
 from .packets.clientbound import EncryptionRequest, SetCompression, LoginSuccess
 from .encryption import *
 
+from zlib import decompress
+
 
 class ConnectionThread(threading.Thread):
     def __init__(self, connection):
@@ -37,7 +39,22 @@ class PacketHandler:
     def read_packet_buffer(self, write_length=False):
         packet_buffer = PacketBuffer()
         length = VarInt.read(self.connection.stream)
+
         data = self.connection.stream.read(length)
+
+        # Decompress if needed
+        if self.connection.threshold:
+            compressed_buf = PacketBuffer()
+            compressed_buf.write(data)
+            compressed_buf.reset_cursor()
+            decompressed_length = VarInt.read(compressed_buf)
+            is_compressed = decompressed_length > 0
+            data = compressed_buf.read()
+            if is_compressed:
+                # Read all the remaining bytes past the compression indicator into the packet buffer
+                data = decompress(data)
+                assert(len(data) == decompressed_length)
+
         if write_length:
             VarInt.write(length, packet_buffer)
         packet_buffer.write(data)
@@ -91,8 +108,15 @@ class LoginHandler(PacketHandler):
 
         # Now packets are encrypted, so we can switch states after reading the decrypted login success
         packet_buffer = self.read_packet_buffer()
-        set_compression = SetCompression().read(packet_buffer)
-        print(set_compression.Threshold)
+        threshold = SetCompression().read(packet_buffer).Threshold
+
+        self.connection.threshold = threshold
+
+        packet_buffer = self.read_packet_buffer()
+        login_success = LoginSuccess().read(packet_buffer)
+
+        packet_buffer = self.read_packet_buffer()
+        print(packet_buffer)
 
 class IdleHandler(PacketHandler):
     """ Idling occurs when we've disconnected our client or have yet to connect """
@@ -107,7 +131,7 @@ class Connection:
         self.stream = self.socket.makefile('rb')
         self.username = username
         self.address = (ip, port)
-        self.compression = None
+        self.threshold = None
         self.protocol = protocol
 
         self.auth = Auth(username, profile)
