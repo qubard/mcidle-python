@@ -27,7 +27,7 @@ class ConnectionThread(threading.Thread):
 
 
 class PacketHandler:
-    """ Generic packet handler """
+    """ Generic packet handler responsible for processing incoming packets """
     def __init__(self, connection):
         self.connection = connection
 
@@ -46,10 +46,14 @@ class PacketHandler:
         if self.connection.threshold:
             compressed_buf = PacketBuffer()
             compressed_buf.write(data)
-            compressed_buf.reset_cursor()
+            compressed_buf.reset_cursor() # Need to reset to read off the compression byte(s)
+
             decompressed_length = VarInt.read(compressed_buf)
             is_compressed = decompressed_length > 0
+
+            # Chop off the compression byte(s)
             data = compressed_buf.read()
+
             if is_compressed:
                 # Read all the remaining bytes past the compression indicator into the packet buffer
                 data = decompress(data)
@@ -57,8 +61,10 @@ class PacketHandler:
 
         if write_length:
             VarInt.write(length, packet_buffer)
+
         packet_buffer.write(data)
         packet_buffer.reset_cursor()
+
         return packet_buffer
 
     """ Default behaviour is to consume packets """
@@ -107,16 +113,10 @@ class LoginHandler(PacketHandler):
         self.connection.stream = EncryptedFileObjectWrapper(self.connection.stream, decryptor)
 
         # Now packets are encrypted, so we can switch states after reading the decrypted login success
-        packet_buffer = self.read_packet_buffer()
-        threshold = SetCompression().read(packet_buffer).Threshold
+        self.connection.threshold = SetCompression().read(self.read_packet_buffer()).Threshold
 
-        self.connection.threshold = threshold
-
-        packet_buffer = self.read_packet_buffer()
-        login_success = LoginSuccess().read(packet_buffer)
-
-        packet_buffer = self.read_packet_buffer()
-        print(packet_buffer)
+        login_success = LoginSuccess().read(self.read_packet_buffer())
+        print(login_success)
 
 class IdleHandler(PacketHandler):
     """ Idling occurs when we've disconnected our client or have yet to connect """

@@ -30,7 +30,7 @@ class Packet:
         assert not kwargs or set(kwargs.keys()) == set(self.definition.keys()), "Packet fields do not match definition!"
 
     """ Read from the packet buffer into the packet's fields """
-    def read(self, packet_buffer, compression_threshold=None):
+    def read(self, packet_buffer):
         assert(VarInt.read(packet_buffer) == self.id)
         for var_name, data_type in self.definition.items():
             val = data_type.read(packet_buffer)
