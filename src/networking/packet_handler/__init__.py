@@ -45,5 +45,5 @@ class PacketHandler:
         return packet_buffer
 
     """ Default behaviour is to consume packets """
-    def handle(self, packet_buffer):
+    def handle(self):
         pass

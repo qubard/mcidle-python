@@ -6,9 +6,6 @@ from src.networking.packet_handler import PacketHandler
 
 class LoginHandler(PacketHandler):
     """ Handles logging in and establishing encryption (if needed) """
-    def __init__(self, connection):
-        super().__init__(connection)
-
     def initialize(self):
         handshake = Handshake(ProtocolVersion=self.connection.protocol, ServerAddress=self.connection.address[0], ServerPort=self.connection.address[1],
                               NextState=2)
