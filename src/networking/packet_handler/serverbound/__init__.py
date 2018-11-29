@@ -5,17 +5,16 @@ from src.networking.packet_handler import PacketHandler
 
 
 class LoginHandler(PacketHandler):
-    """ Handles logging in and establishing encryption (if needed) """
-    def initialize(self):
-        handshake = Handshake(ProtocolVersion=self.connection.protocol, ServerAddress=self.connection.address[0], ServerPort=self.connection.address[1],
-                              NextState=2)
+    """ Do all the authentication and logging in"""
+    def handle(self):
+        # Send a handshake and login start packet
+        handshake = Handshake(ProtocolVersion=self.connection.protocol, ServerAddress=self.connection.address[0], \
+                              ServerPort=self.connection.address[1], NextState=2)
         login_start = LoginStart(Name=self.connection.username)
 
         self.connection.socket.send(handshake.write().bytes)
         self.connection.socket.send(login_start.write().bytes)
 
-    """ Do all the authentication and logging in"""
-    def handle(self):
         encryption_request = EncryptionRequest().read(self.read_packet_buffer())
 
         # Generate the encryption response to send over

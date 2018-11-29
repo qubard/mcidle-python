@@ -8,10 +8,6 @@ class PacketHandler:
     def __init__(self, connection):
         self.connection = connection
 
-    """ We can't receive or handle packets until we've done basic initialization """
-    def initialize(self):
-        pass
-
     """ Read the next packet into a packet buffer """
     def read_packet_buffer(self, write_length=False):
         packet_buffer = PacketBuffer()

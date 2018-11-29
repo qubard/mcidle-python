@@ -10,6 +10,8 @@ class Connection(threading.Thread):
     def __init__(self, ip=None, port=None):
         threading.Thread.__init__(self)
         self.socket = socket.socket()
+        """ Create a read only blocking file interface (stream) for the socket """
+        self.stream = self.socket.makefile('rb')
         self.address = (ip, port)
         self.packet_handler = None
 
@@ -19,7 +21,6 @@ class Connection(threading.Thread):
     def run(self):
         self.initialize_connection()
         if self.packet_handler is not None:
-            self.packet_handler.initialize()
             self.packet_handler.handle()
 
 
@@ -27,8 +28,6 @@ class MinecraftConnection(Connection):
     def __init__(self, username, ip, protocol, port=25565, profile=None):
         super().__init__(ip, port)
 
-        """ Create a readable only file interface (stream) for the socket """
-        self.stream = self.socket.makefile('rb')
         self.username = username
         self.threshold = None
         self.protocol = protocol
