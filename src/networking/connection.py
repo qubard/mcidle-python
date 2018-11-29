@@ -9,11 +9,19 @@ from src.networking.packet_handler.clientbound import LoginHandler as Clientboun
 class Connection(threading.Thread):
     def __init__(self, ip=None, port=None):
         threading.Thread.__init__(self)
-        self.socket = socket.socket()
-        """ Create a read only blocking file interface (stream) for the socket """
-        self.stream = self.socket.makefile('rb')
+        self.threshold = None
         self.address = (ip, port)
         self.packet_handler = None
+
+        self.socket = None
+        self.stream = None
+
+        self.initialize_socket(socket.socket())
+
+    def initialize_socket(self, sock):
+        self.socket = sock
+        """ Create a read only blocking file interface (stream) for the socket """
+        self.stream = self.socket.makefile('rb')
 
     def initialize_connection(self):
         pass
@@ -29,7 +37,6 @@ class MinecraftConnection(Connection):
         super().__init__(ip, port)
 
         self.username = username
-        self.threshold = None
         self.protocol = protocol
 
         self.auth = Auth(username, profile)
@@ -61,11 +68,14 @@ class MinecraftServer(Connection):
 
     """ Bind to a socket and wait for a client to connect """
     def initialize_connection(self):
-        self.socket.bind(self.address)
+        self.socket.bind(('localhost', 1337))
         self.socket.listen(1) # Listen for 1 incoming connection
 
         print("Waiting for client", flush=True)
 
         (connection, address) = self.socket.accept()
+
+        # Replace the server socket with the client's socket
+        self.initialize_socket(connection)
 
         print("Got client", connection, address, flush=True)
