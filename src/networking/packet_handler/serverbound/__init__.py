@@ -5,8 +5,11 @@ from src.networking.packet_handler import PacketHandler
 
 
 class LoginHandler(PacketHandler):
-    """ Do all the authentication and logging in"""
     def handle(self):
+        self.login()
+
+    """ Do all the authentication and logging in"""
+    def login(self):
         # Send a handshake and login start packet
         handshake = Handshake(ProtocolVersion=self.connection.protocol, ServerAddress=self.connection.address[0], \
                               ServerPort=self.connection.address[1], NextState=2)
@@ -19,7 +22,8 @@ class LoginHandler(PacketHandler):
 
         # Generate the encryption response to send over
         shared_secret = generate_shared_secret()
-        (encrypted_token, encrypted_secret) = encrypt_token_and_secret(encryption_request.PublicKey, encryption_request.VerifyToken, shared_secret)
+        (encrypted_token, encrypted_secret) = encrypt_token_and_secret(encryption_request.PublicKey,
+                                                                       encryption_request.VerifyToken, shared_secret)
         encryption_response = EncryptionResponse(SharedSecret=encrypted_secret, VerifyToken=encrypted_token)
 
         # Generate an auth token, serverID is always empty
@@ -45,7 +49,6 @@ class LoginHandler(PacketHandler):
         self.connection.threshold = SetCompression().read(self.read_packet_buffer()).Threshold
 
         login_success = LoginSuccess().read(self.read_packet_buffer())
-        print(login_success, flush=True)
 
 
 class IdleHandler(PacketHandler):
