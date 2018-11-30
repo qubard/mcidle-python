@@ -80,7 +80,7 @@ class IdleHandler(PacketHandler):
                         unload_chunk = UnloadChunk().read(packet.packet_buffer)
                         if 0x20 in self.connection.packet_log:
                             del self.connection.packet_log[0x20][(unload_chunk.ChunkX, unload_chunk.ChunkY)]
-                        print("UnloadChunk", unload_chunk.ChunkX, unload_chunk.ChunkY)
+                            print("UnloadChunk", unload_chunk.ChunkX, unload_chunk.ChunkY)
                     elif packet.id in SpawnEntity.ids:
                         spawn_entity = SpawnEntity().read(packet.packet_buffer)
                         if 0x03 not in self.connection.packet_log:
@@ -98,6 +98,10 @@ class IdleHandler(PacketHandler):
                         keep_alive = KeepAlive().read(packet.packet_buffer)
                         print("Responded to KeepAlive", keep_alive, flush=True)
                         self.connection.send_packet(KeepAliveServerbound(KeepAliveID=keep_alive.KeepAliveID))
+                    elif packet.id == 0x2E:
+                        if 0x2E not in self.connection.packet_log:
+                            self.connection.packet_log[0x2E] = []
+                        self.connection.packet_log[0x2E].append(packet)
 
                     # Forward the packets if a client is connected
                     if self.connection.client_connection:

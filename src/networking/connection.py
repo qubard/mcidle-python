@@ -69,8 +69,8 @@ class MinecraftConnection(Connection):
 
         self.packet_handler = ServerboundLoginHandler(self)
 
-        """ JoinGame, PluginMessage, ServerDifficulty, SpawnPosition, PlayerAbilities, Respawn, PlayerListItem """
-        self.join_ids = [0x23, 0x09, 0x0D, 0x46, 0x2C, 0x2F, 0x35, 0x2E]
+        """ JoinGame, PluginMessage, ServerDifficulty, SpawnPosition, PlayerAbilities, Respawn """
+        self.join_ids = [0x23, 0x09, 0x0D, 0x46, 0x2C, 0x2F, 0x35]
         self.packet_log = {} # Keep track of all the packets for re-sending upon connection
 
     """ Connect to the socket and start a connection thread """
