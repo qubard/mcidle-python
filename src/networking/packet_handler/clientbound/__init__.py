@@ -21,7 +21,7 @@ class LoginHandler(PacketHandler):
         privkey = rsa.generate_private_key(public_exponent=65537, key_size=2048, backend=default_backend())
         pubkey = privkey.public_key().public_bytes(encoding=serialization.Encoding.DER, format=serialization.PublicFormat.SubjectPublicKeyInfo)
 
-        self.connection.send(EncryptionRequest(ServerID='', PublicKey=pubkey, VerifyToken=self.mc_connection.VerifyToken))
+        self.connection.send_packet(EncryptionRequest(ServerID='', PublicKey=pubkey, VerifyToken=self.mc_connection.VerifyToken))
 
         # The encryption response will be encrypted with the server's public key
         encryption_response = EncryptionResponse().read(self.read_packet().packet_buffer)
@@ -37,7 +37,20 @@ class LoginHandler(PacketHandler):
         self.connection.enable_encryption(shared_secret)
 
         # Enable compression and assign the threshold to the connection
-        self.connection.send(SetCompression(Threshold=self.mc_connection.compression_threshold))
+        self.connection.send_packet(SetCompression(Threshold=self.mc_connection.compression_threshold))
         self.connection.compression_threshold = self.mc_connection.compression_threshold
 
-        self.connection.send(self.mc_connection.login_success)
+        self.connection.send_packet(self.mc_connection.login_success)
+
+        print(["0x%02x" % id for id in self.mc_connection.packet_log.keys()], flush=True)
+        for id in self.mc_connection.join_ids:
+            if id in self.mc_connection.packet_log:
+                packet = self.mc_connection.packet_log[id]
+                print("Sent 0x%02x" % id, flush=True)
+                self.connection.send_packet_buffer(packet.compressed_buffer)
+
+        chunk_dict = self.mc_connection.packet_log[0x20]
+
+        for packet in chunk_dict.values():
+            print("Sent 0x20", flush=True)
+            self.connection.send_packet_buffer(packet.compressed_buffer)

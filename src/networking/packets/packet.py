@@ -6,6 +6,7 @@ from base64 import b64encode
 
 class Packet:
     id = None
+    ids = None
     definition = None
 
     def __init__(self, **kwargs):
@@ -40,7 +41,6 @@ class Packet:
     def read(self, packet_buffer):
         id_ = VarInt.read(packet_buffer)
         assert(id_ == self.id or (self.ids and id_ in self.ids))
-
         for var_name, data_type in self.definition.items():
             val = data_type.read(packet_buffer)
             setattr(self, var_name, val)

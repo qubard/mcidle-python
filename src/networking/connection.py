@@ -39,8 +39,11 @@ class Connection(threading.Thread):
     def initialize_connection(self):
         pass
 
-    def send(self, packet):
+    def send_packet(self, packet):
         self.socket.send(packet.write(self.compression_threshold).bytes)
+
+    def send_packet_buffer(self, packet_buffer):
+        self.socket.send(packet_buffer.bytes)
 
     def run(self):
         self.initialize_connection()
@@ -64,6 +67,8 @@ class MinecraftConnection(Connection):
 
         self.packet_handler = ServerboundLoginHandler(self)
 
+        """ JoinGame, PluginMessage, ServerDifficulty, SpawnPosition, PlayerAbilities """
+        self.join_ids = [0x23, 0x09, 0x0D, 0x46, 0x2C, 0x2F]
         self.packet_log = {} # Keep track of all the packets for re-sending upon connection
 
     """ Connect to the socket and start a connection thread """

@@ -18,8 +18,8 @@ class LoginHandler(PacketHandler):
                               ServerPort=self.connection.address[1], NextState=2)
         login_start = LoginStart(Name=self.connection.username)
 
-        self.connection.send(handshake)
-        self.connection.send(login_start)
+        self.connection.send_packet(handshake)
+        self.connection.send_packet(login_start)
 
         encryption_request = EncryptionRequest().read(self.read_packet().packet_buffer)
         self.connection.VerifyToken = encryption_request.VerifyToken
@@ -38,7 +38,7 @@ class LoginHandler(PacketHandler):
         self.connection.auth.join(server_id_hash)
 
         # Send the encryption response
-        self.connection.send(encryption_response)
+        self.connection.send_packet(encryption_response)
 
         # Enable encryption using the shared secret
         self.connection.enable_encryption(shared_secret)
@@ -64,24 +64,31 @@ class IdleHandler(PacketHandler):
 
             if ready_to_read:
                 packet = self.read_packet()
-                if packet.id == 0x20: # ChunkData
-                    if packet.id in self.connection.packet_log:
-                        self.connection.packet_log[packet.id].append(packet)
-                    else:
-                        self.connection.packet_log[packet.id] = [packet]
+
+                if packet.id in self.connection.join_ids:
+                    self.connection.packet_log[packet.id] = packet
+                    print("Packet ID: 0x%02x" % packet.id)
+                elif packet.id == 0x20: # ChunkData
+                    chunk_data = ChunkData().read(packet.packet_buffer)
+                    if packet.id not in self.connection.packet_log:
+                        self.connection.packet_log[packet.id] = {}
+                    self.connection.packet_log[packet.id][(chunk_data.ChunkX, chunk_data.ChunkY)] = packet
+                    print("ChunkData", chunk_data.ChunkX, chunk_data.ChunkY)
                 elif packet.id == 0x1D: # UnloadChunk
                     unload_chunk = UnloadChunk().read(packet.packet_buffer)
-                    if packet.id in self.connection.packet_log:
-                        chunks = self.connection.packet_log[packet.id]
-                        for chunk in chunks:
-                            chunk_data = ChunkData().read(chunk.packet_buffer)
-                            if chunk_data.ChunkX == unload_chunk.ChunkX and chunk_data.ChunkY == unload_chunk.ChunkY:
-                                print("Unloaded chunk", chunk_data)
-                                chunks.remove(chunk)
-                                break
+                    if 0x20 in self.connection.packet_log:
+                        del self.connection.packet_log[0x20][(unload_chunk.ChunkX, unload_chunk.chunkY)]
+                    print("UnloadChunk", unload_chunk.ChunkX, unload_chunk.ChunkY)
                 elif packet.id in SpawnEntity.ids:
                     spawn_entity = SpawnEntity().read(packet.packet_buffer)
-                    print("Spawned Entity 0x%02x" % packet.id, spawn_entity, flush=True)
+                    if 0x03 not in self.connection.packet_log:
+                        self.connection.packet_log[0x03] = {}
+                    self.connection.packet_log[0x03][spawn_entity.EntityID] = packet
+                    print("Added", self.connection.packet_log[0x03].keys(), flush=True)
                 elif packet.id == 0x32:
                     destroy_entities = DestroyEntities().read(packet.packet_buffer)
-                    print("Destroy entities", destroy_entities)
+                    if 0x03 in self.connection.packet_log:
+                        for entity_id in destroy_entities.Entities:
+                            print("Removed", entity_id, flush=True)
+                            del self.connection.packet_log[0x03][entity_id] # Delete the entity
+                        print("Removed", self.connection.packet_log[0x03].keys(), flush=True)
