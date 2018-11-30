@@ -3,7 +3,7 @@ import threading
 
 from .auth import Auth
 from src.networking.encryption import *
-from src.networking.packet_handler.serverbound import LoginHandler as ServerboundLoginHandler, IdleHandler
+from src.networking.packet_handler.serverbound import LoginHandler as ServerboundLoginHandler
 from src.networking.packet_handler.clientbound import LoginHandler as ClientboundLoginHandler
 
 
@@ -100,7 +100,7 @@ class MinecraftServer(Connection):
 
     """ Bind to a socket and wait for a client to connect """
     def initialize_connection(self):
-        self.socket.bind(('localhost', 1337))
+        self.socket.bind(self.address)
         self.socket.listen(1) # Listen for 1 incoming connection
 
         print("Waiting for client", flush=True)

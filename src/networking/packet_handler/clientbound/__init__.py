@@ -29,14 +29,16 @@ class LoginHandler(PacketHandler):
                 self.connection.send_packet_buffer(packet.compressed_buffer)
 
         # Send the player all the currently loaded entities
-        entity_dict = self.mc_connection.packet_log[0x03]
-        for packet in entity_dict.values():
-            self.connection.send_packet_buffer(packet.compressed_buffer)
+        if 0x03 in self.mc_connection.packet_log:
+            entity_dict = self.mc_connection.packet_log[0x03]
+            for packet in entity_dict.values():
+                self.connection.send_packet_buffer(packet.compressed_buffer)
 
-        # Send the player all the currently loaded chunks
-        chunk_dict = self.mc_connection.packet_log[0x20]
-        for packet in chunk_dict.values():
-            self.connection.send_packet_buffer(packet.compressed_buffer)
+        if 0x20 in self.mc_connection.packet_log:
+            # Send the player all the currently loaded chunks
+            chunk_dict = self.mc_connection.packet_log[0x20]
+            for packet in chunk_dict.values():
+                self.connection.send_packet_buffer(packet.compressed_buffer)
 
         # Player sends ClientStatus, this is important for respawning if died
         self.mc_connection.send_packet(ClientStatus(ActionID=0))
