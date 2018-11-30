@@ -44,6 +44,7 @@ class Packet:
             setattr(self, var_name, val)
 
         self.packet_buffer_ = packet_buffer
+        self.packet_buffer.reset_cursor()
 
         return self
 
