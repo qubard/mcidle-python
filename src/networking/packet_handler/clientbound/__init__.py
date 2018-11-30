@@ -42,15 +42,12 @@ class LoginHandler(PacketHandler):
 
         self.connection.send_packet(self.mc_connection.login_success)
 
-        print(["0x%02x" % id for id in self.mc_connection.packet_log.keys()], flush=True)
-        for id in self.mc_connection.join_ids:
-            if id in self.mc_connection.packet_log:
-                packet = self.mc_connection.packet_log[id]
-                print("Sent 0x%02x" % id, flush=True)
+        for id_ in self.mc_connection.join_ids:
+            if id_ in self.mc_connection.packet_log:
+                packet = self.mc_connection.packet_log[id_]
                 self.connection.send_packet_buffer(packet.compressed_buffer)
 
         chunk_dict = self.mc_connection.packet_log[0x20]
 
         for packet in chunk_dict.values():
-            print("Sent 0x20", flush=True)
             self.connection.send_packet_buffer(packet.compressed_buffer)
