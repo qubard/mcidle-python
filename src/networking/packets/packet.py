@@ -19,7 +19,10 @@ class Packet:
 
     @property
     def bytes(self):
-        return self.packet_buffer.get_bytes()
+        return self.packet_buffer.bytes
+
+    def clear(self):
+        self.packet_buffer = PacketBuffer()
 
     @property
     def buffer(self):
@@ -44,6 +47,9 @@ class Packet:
         if self.id is None:
             raise AttributeError("Packet ID is undefined.")
 
+        if len(self.bytes) > 0:
+            self.clear() # If we re-use packets we need to clear past byte data
+
         data_length = 0
         """ Create a temporary PacketBuffer """
         packet_buffer = PacketBuffer()
@@ -53,21 +59,32 @@ class Packet:
         data_length += self.__write_fields(packet_buffer)
 
         """ Apply compression if needed """
-        if compression_threshold and data_length >= compression_threshold:
-            self.__write_compressed(packet_buffer, data_length)
+        if compression_threshold:
+            self.__write_compressed(packet_buffer, data_length, data_length >= compression_threshold)
             return self
 
-        VarInt.write(data_length, self.packet_buffer)
-        self.packet_buffer.write(packet_buffer.get_bytes())
+        """ Uncompressed packet """
+        VarInt.write(data_length, self.packet_buffer) # Write the packet length
+        self.packet_buffer.write(packet_buffer.bytes) # Write the data
         return self
 
     """ Write the compressed packet to the buffer """
-    def __write_compressed(self, packet_buffer, data_length):
-        compressed_data = compress(packet_buffer.get_bytes())
+    def __write_compressed(self, packet_buffer, data_length, is_compressed):
+        actual_data_length = 0
+        data = packet_buffer.bytes
+
+        if is_compressed:
+            data = compress(data)
+            actual_data_length = VarInt.write(data_length, PacketBuffer()) + len(data)
+
+        # Clear the last packet buffer to be overwritten
         packet_buffer.clear()
-        VarInt.write(VarInt.write(data_length, PacketBuffer()) + len(compressed_data), self.packet_buffer)
-        VarInt.write(data_length, self.packet_buffer)
-        self.packet_buffer.write(compressed_data)
+
+        packet_length = VarInt.write(actual_data_length, PacketBuffer()) + len(data)
+
+        VarInt.write(packet_length, self.packet_buffer)
+        VarInt.write(actual_data_length, self.packet_buffer)
+        self.packet_buffer.write(data)
 
     def __write_fields(self, packet_buffer):
         length = 0

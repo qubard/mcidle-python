@@ -15,10 +15,11 @@ class LoginHandler(PacketHandler):
                               ServerPort=self.connection.address[1], NextState=2)
         login_start = LoginStart(Name=self.connection.username)
 
-        self.connection.socket.send(handshake.write().bytes)
-        self.connection.socket.send(login_start.write().bytes)
+        self.connection.send(handshake)
+        self.connection.send(login_start)
 
         encryption_request = EncryptionRequest().read(self.read_packet_buffer())
+        self.connection.VerifyToken = encryption_request.VerifyToken
 
         # Generate the encryption response to send over
         shared_secret = generate_shared_secret()
@@ -34,21 +35,17 @@ class LoginHandler(PacketHandler):
         self.connection.auth.join(server_id_hash)
 
         # Send the encryption response
-        self.connection.socket.send(encryption_response.write().bytes)
+        self.connection.send(encryption_response)
 
-        # Enable encryption over the socket
-        cipher = create_AES_cipher(shared_secret)
-        encryptor = cipher.encryptor()
-        decryptor = cipher.decryptor()
+        # Enable encryption using the shared secret
+        self.connection.enable_encryption(shared_secret)
 
-        # Replace the socket used with an encrypted socket
-        self.connection.socket = EncryptedSocketWrapper(self.connection.socket, encryptor, decryptor)
-        self.connection.stream = EncryptedFileObjectWrapper(self.connection.stream, decryptor)
+        # Enable compression and set the threshold
+        set_compression = SetCompression().read(self.read_packet_buffer())
+        self.connection.compression_threshold = set_compression.Threshold
 
         # Now packets are encrypted, so we can switch states after reading the decrypted login success
-        self.connection.threshold = SetCompression().read(self.read_packet_buffer()).Threshold
-
-        login_success = LoginSuccess().read(self.read_packet_buffer())
+        self.connection.login_success = LoginSuccess().read(self.read_packet_buffer())
 
 
 class IdleHandler(PacketHandler):

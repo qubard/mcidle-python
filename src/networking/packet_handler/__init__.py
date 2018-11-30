@@ -16,7 +16,7 @@ class PacketHandler:
         data = self.connection.stream.read(length)
 
         # Decompress if needed
-        if self.connection.threshold:
+        if self.connection.compression_threshold:
             compressed_buf = PacketBuffer()
             compressed_buf.write(data)
             compressed_buf.reset_cursor() # Need to reset to read off the compression byte(s)
