@@ -7,13 +7,6 @@ from src.networking.types import String, Long, UnsignedShort, VarInt, VarIntPref
 """
 
 
-# Useful for mapping packet IDs to their respective classes
-def get_packets():
-    return {
-        packet.id: packet for packet in [KeepAlive, Handshake, LoginStart, EncryptionResponse]
-    }
-
-
 class KeepAlive(Packet):
     id = 0x0E
     definition = {

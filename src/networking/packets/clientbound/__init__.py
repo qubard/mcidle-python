@@ -7,13 +7,6 @@ from src.networking.types import String, VarIntPrefixedByteArray, VarInt
 """
 
 
-# Useful for mapping packet IDs to their respective classes
-def get_packets():
-    return {
-        packet.id: packet for packet in [EncryptionRequest, LoginSuccess, SetCompression]
-    }
-
-
 class EncryptionRequest(Packet):
     id = 0x01
     definition = {
