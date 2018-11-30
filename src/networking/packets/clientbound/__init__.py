@@ -1,5 +1,5 @@
 from src.networking.packets.packet import Packet
-from src.networking.types import String, VarIntPrefixedByteArray, VarInt
+from src.networking.types import String, VarIntPrefixedByteArray, VarInt, Integer, Boolean
 
 """
  Note: not using an OrderedDict for `definition` will break
@@ -28,4 +28,27 @@ class SetCompression(Packet):
     id = 0x03
     definition = {
         "Threshold": VarInt
+    }
+
+
+class ChunkData(Packet):
+    id = 0x20
+    definition =  {
+        "ChunkX": Integer,
+        "ChunkY": Integer
+    }
+
+
+class UnloadChunk(Packet):
+    id = 0x1D
+    definition =  {
+        "ChunkX": Integer,
+        "ChunkY": Integer
+    }
+
+
+class SpawnEntity(Packet):
+    ids = [0x0, 0x01, 0x03, 0x04, 0x05, 0x25]
+    definition = {
+        "EntityID": VarInt
     }

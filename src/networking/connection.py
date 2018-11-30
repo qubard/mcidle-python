@@ -64,6 +64,8 @@ class MinecraftConnection(Connection):
 
         self.packet_handler = ServerboundLoginHandler(self)
 
+        self.packet_log = {} # Keep track of all the packets for re-sending upon connection
+
     """ Connect to the socket and start a connection thread """
     def connect(self):
         self.socket.connect(self.address)

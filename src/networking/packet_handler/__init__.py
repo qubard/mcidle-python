@@ -10,7 +10,7 @@ class PacketHandler:
         self.connection = connection
 
     """ Read the next packet from the stream """
-    def read_packet(self, write_length=False, compressed=False):
+    def read_packet(self, write_length=False):
         packet_buffer = PacketBuffer()
         length = VarInt.read(self.connection.stream)
 
@@ -45,17 +45,14 @@ class PacketHandler:
         if write_length:
             VarInt.write(length, packet_buffer)
 
-        if compressed:
-            packet_buffer.write(data)
+        if decompressed_data:
+            packet_buffer.write(decompressed_data)
         else:
-            if decompressed_data:
-                packet_buffer.write(decompressed_data)
-            else:
-                packet_buffer.write(data)
+            packet_buffer.write(data)
 
         packet_buffer.reset_cursor()
 
-        return Packet(packet_buffer_=packet_buffer, id=id_)
+        return Packet(packet_buffer_=packet_buffer, compressed_buffer=data, id=id_)
 
     """ Default behaviour is to consume packets """
     def handle(self):

@@ -1,5 +1,5 @@
 from src.networking.packets.serverbound import Handshake, LoginStart, EncryptionResponse
-from src.networking.packets.clientbound import EncryptionRequest, SetCompression, LoginSuccess
+from src.networking.packets.clientbound import EncryptionRequest, SetCompression, LoginSuccess, ChunkData, UnloadChunk, SpawnEntity
 from src.networking.encryption import *
 from src.networking.packet_handler import PacketHandler
 
@@ -57,9 +57,27 @@ class LoginHandler(PacketHandler):
 class IdleHandler(PacketHandler):
     """ Idling occurs when we've disconnected our client or have yet to connect """
     def handle(self):
-        timeout = 0.05
+        timeout = 0.05 # Always 50ms
         while True:
             ready_to_read = select.select([self.connection.stream], [], [], timeout)[0]
 
             if ready_to_read:
-                print(self.read_packet(compressed=True, write_length=True), flush=True)
+                packet = self.read_packet()
+                if packet.id == 0x20: # ChunkData
+                    if packet.id in self.connection.packet_log:
+                        self.connection.packet_log[packet.id].append(packet)
+                    else:
+                        self.connection.packet_log[packet.id] = [packet]
+                elif packet.id == 0x1D: # UnloadChunk
+                    unload_chunk = UnloadChunk().read(packet.packet_buffer)
+                    if packet.id in self.connection.packet_log:
+                        chunks = self.connection.packet_log[packet.id]
+                        for chunk in chunks:
+                            chunk_data = ChunkData().read(chunk.packet_buffer)
+                            if chunk_data.ChunkX == unload_chunk.ChunkX and chunk_data.ChunkY == unload_chunk.ChunkY:
+                                print("Unloaded chunk", chunk_data)
+                                chunks.remove(chunk)
+                                break
+                elif packet.id in SpawnEntity.ids:
+                    spawn_entity = SpawnEntity().read(packet.packet_buffer)
+                    print("Spawned Entity 0x%02x" % packet.id, spawn_entity, flush=True)
