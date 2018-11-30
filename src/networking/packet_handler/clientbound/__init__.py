@@ -8,9 +8,9 @@ from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric.padding import PKCS1v15
 
 class LoginHandler(PacketHandler):
-    def set_mc_connection(self, mc_connection):
+    def __init__(self, connection, mc_connection):
+        super().__init__(connection)
         self.mc_connection = mc_connection
-        return self
 
     def handle(self):
         Handshake().read(self.read_packet_buffer())

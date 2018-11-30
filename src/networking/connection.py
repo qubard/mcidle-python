@@ -87,7 +87,7 @@ class MinecraftServer(Connection):
     """ Used for listening on a port for a connection """
     def __init__(self, port=25565, mc_connection=None):
         super().__init__('localhost', port)
-        self.packet_handler = ClientboundLoginHandler(self).set_mc_connection(mc_connection)
+        self.packet_handler = ClientboundLoginHandler(self, mc_connection)
 
     """ Bind to a socket and wait for a client to connect """
     def initialize_connection(self):
