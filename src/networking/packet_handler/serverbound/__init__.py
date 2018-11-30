@@ -62,4 +62,4 @@ class IdleHandler(PacketHandler):
             ready_to_read = select.select([self.connection.stream], [], [], timeout)[0]
 
             if ready_to_read:
-                print(self.read_packet(), flush=True)
+                print(self.read_packet(compressed=True, write_length=True), flush=True)

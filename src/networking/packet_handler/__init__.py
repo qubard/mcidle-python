@@ -9,12 +9,13 @@ class PacketHandler:
     def __init__(self, connection):
         self.connection = connection
 
-    """ Read the next packet """
-    def read_packet(self, write_length=False):
+    """ Read the next packet from the stream """
+    def read_packet(self, write_length=False, compressed=False):
         packet_buffer = PacketBuffer()
         length = VarInt.read(self.connection.stream)
 
         data = self.connection.stream.read(length)
+        decompressed_data = None
 
         # Decompress if needed
         if self.connection.compression_threshold:
@@ -30,18 +31,28 @@ class PacketHandler:
 
             if is_compressed:
                 # Read all the remaining bytes past the compression indicator into the packet buffer
-                data = decompress(data)
-                assert(len(data) == decompressed_length)
+                decompressed_data = decompress(data)
+                assert(len(decompressed_data) == decompressed_length)
 
         id_buffer = PacketBuffer()
-        id_buffer.write(data[:5]) # Only need the first 5 bytes for an ID
+        if decompressed_data:
+            id_buffer.write(decompressed_data[:5]) # Only need the first 5 bytes for an ID
+        else:
+            id_buffer.write(data[:5])
         id_buffer.reset_cursor()
         id_ = VarInt.read(id_buffer)
 
         if write_length:
             VarInt.write(length, packet_buffer)
 
-        packet_buffer.write(data)
+        if compressed:
+            packet_buffer.write(data)
+        else:
+            if decompressed_data:
+                packet_buffer.write(decompressed_data)
+            else:
+                packet_buffer.write(data)
+
         packet_buffer.reset_cursor()
 
         return Packet(packet_buffer_=packet_buffer, id=id_)

@@ -100,11 +100,12 @@ class Packet:
         return length
 
     def field_string(self, field):
-        """ The string representation of the value of a the given named field
+        """ The string representation of the value of the given named field
             of this packet. Override to customise field value representation.
         """
         value = getattr(self, field, None)
 
+        # Byte arrays are represented in base64
         if isinstance(value, bytes) or isinstance(value, bytearray):
             return b64encode(value).decode("utf-8")
 
