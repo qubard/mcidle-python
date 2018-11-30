@@ -77,12 +77,17 @@ class LoginHandler(PacketHandler):
         # Let the real connection know about our client
         self.mc_connection.client_connection = self.connection
 
-        timeout = 0.05  # Always 50ms
+        timeout = 0.05 # Always 50ms
         while True:
-            ready_to_read = select.select([self.connection.stream], [], [], timeout)[0]
+            try:
+                if self.connection.connected:
+                    ready_to_read = select.select([self.connection.stream], [], [], timeout)[0]
 
-            if ready_to_read:
-                packet = self.read_packet()
-                if packet:
-                    self.mc_connection.send_packet_buffer(packet.compressed_buffer)
+                    if ready_to_read:
+                        packet = self.read_packet()
+                        if packet:
+                            self.mc_connection.send_packet_buffer(packet.compressed_buffer)
+            except:
+                self.connection.reset_socket()
+                self.mc_connection.start_server() # Start the server again
 

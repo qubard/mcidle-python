@@ -86,15 +86,14 @@ class IdleHandler(PacketHandler):
                         if 0x03 not in self.connection.packet_log:
                             self.connection.packet_log[0x03] = {}
                         self.connection.packet_log[0x03][spawn_entity.EntityID] = packet
-                        print("Added", self.connection.packet_log[0x03].keys(), flush=True)
+                        print("Added entity ID: %s" % spawn_entity.EntityID, self.connection.packet_log[0x03].keys(), flush=True)
                     elif packet.id == 0x32:
                         destroy_entities = DestroyEntities().read(packet.packet_buffer)
                         if 0x03 in self.connection.packet_log:
                             for entity_id in destroy_entities.Entities:
-                                print("Removed", entity_id, flush=True)
+                                print("Removed entity ID: %s" % entity_id, self.connection.packet_log[0x03].keys(), flush=True)
                                 del self.connection.packet_log[0x03][entity_id] # Delete the entity
-                            print("Removed", self.connection.packet_log[0x03].keys(), flush=True)
-                    elif packet.id == 0x1F and not self.connection.client_connection: # Keep Alive Clientbound
+                    elif packet.id == 0x1F: # Keep Alive Clientbound
                         keep_alive = KeepAlive().read(packet.packet_buffer)
                         print("Responded to KeepAlive", keep_alive, flush=True)
                         self.connection.send_packet(KeepAliveServerbound(KeepAliveID=keep_alive.KeepAliveID))
@@ -103,6 +102,9 @@ class IdleHandler(PacketHandler):
                             self.connection.packet_log[0x2E] = []
                         self.connection.packet_log[0x2E].append(packet)
 
-                    # Forward the packets if a client is connected
-                    if self.connection.client_connection:
-                        self.connection.client_connection.send_packet_buffer(packet.compressed_buffer)
+                    # Forward the packets if a client is connected, don't send KeepAlive
+                    if self.connection.client_connection and self.connection.client_connection.connected and packet.id != 0x1F:
+                        try:
+                            self.connection.client_connection.send_packet_buffer(packet.compressed_buffer)
+                        except ConnectionAbortedError:
+                            pass

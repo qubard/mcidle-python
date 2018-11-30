@@ -26,6 +26,16 @@ class Connection(threading.Thread):
         """ Create a read only blocking file interface (stream) for the socket """
         self.stream = self.socket.makefile('rb')
 
+    def reset_socket(self):
+        self.socket.shutdown(2)
+        self.socket.close()
+        self.socket = None
+        self.stream = None
+
+    @property
+    def connected(self):
+        return self.socket and self.stream
+
     def enable_encryption(self, shared_secret):
         cipher = create_AES_cipher(shared_secret)
         # Generate the encrypted endpoints
@@ -69,7 +79,8 @@ class MinecraftConnection(Connection):
 
         self.packet_handler = ServerboundLoginHandler(self)
 
-        """ JoinGame, PluginMessage, ServerDifficulty, SpawnPosition, PlayerAbilities, Respawn """
+        """ JoinGame, PluginMessage, ServerDifficulty, SpawnPosition,
+         PlayerAbilities, PlayerPosLook, Respawn """
         self.join_ids = [0x23, 0x09, 0x0D, 0x46, 0x2C, 0x2F, 0x35]
         self.packet_log = {} # Keep track of all the packets for re-sending upon connection
 
