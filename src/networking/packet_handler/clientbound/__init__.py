@@ -13,6 +13,23 @@ class LoginHandler(PacketHandler):
         super().__init__(connection)
         self.mc_connection = mc_connection
 
+    def join_world(self):
+        # Send the player all the packets that lets them join the world
+        for id_ in self.mc_connection.join_ids:
+            if id_ in self.mc_connection.packet_log:
+                packet = self.mc_connection.packet_log[id_]
+                self.connection.send_packet_buffer(packet.compressed_buffer)
+
+        # Send the player all the currently loaded entities
+        entity_dict = self.mc_connection.packet_log[0x03]
+        for packet in entity_dict.values():
+            self.connection.send_packet_buffer(packet.compressed_buffer)
+
+        # Send the player all the currently loaded chunks
+        chunk_dict = self.mc_connection.packet_log[0x20]
+        for packet in chunk_dict.values():
+            self.connection.send_packet_buffer(packet.compressed_buffer)
+
     def handle(self):
         Handshake().read(self.read_packet().packet_buffer)
         LoginStart().read(self.read_packet().packet_buffer)
@@ -42,12 +59,4 @@ class LoginHandler(PacketHandler):
 
         self.connection.send_packet(self.mc_connection.login_success)
 
-        for id_ in self.mc_connection.join_ids:
-            if id_ in self.mc_connection.packet_log:
-                packet = self.mc_connection.packet_log[id_]
-                self.connection.send_packet_buffer(packet.compressed_buffer)
-
-        chunk_dict = self.mc_connection.packet_log[0x20]
-
-        for packet in chunk_dict.values():
-            self.connection.send_packet_buffer(packet.compressed_buffer)
+        self.join_world()
