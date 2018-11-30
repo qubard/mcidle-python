@@ -1,6 +1,6 @@
 from src.networking.packet_handler import PacketHandler
 from src.networking.packets.serverbound import Handshake, LoginStart, EncryptionResponse
-from src.networking.packets.clientbound import EncryptionRequest, SetCompression, LoginSuccess
+from src.networking.packets.clientbound import EncryptionRequest, SetCompression
 
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives.asymmetric import rsa
@@ -14,8 +14,8 @@ class LoginHandler(PacketHandler):
         self.mc_connection = mc_connection
 
     def handle(self):
-        Handshake().read(self.read_packet_buffer())
-        LoginStart().read(self.read_packet_buffer())
+        Handshake().read(self.read_packet().packet_buffer)
+        LoginStart().read(self.read_packet().packet_buffer)
 
         # Generate a (pubkey, privkey) pair
         privkey = rsa.generate_private_key(public_exponent=65537, key_size=2048, backend=default_backend())
@@ -24,7 +24,7 @@ class LoginHandler(PacketHandler):
         self.connection.send(EncryptionRequest(ServerID='', PublicKey=pubkey, VerifyToken=self.mc_connection.VerifyToken))
 
         # The encryption response will be encrypted with the server's public key
-        encryption_response = EncryptionResponse().read(self.read_packet_buffer())
+        encryption_response = EncryptionResponse().read(self.read_packet().packet_buffer)
 
         # Decrypt and verify the verify token
         verify_token = privkey.decrypt(encryption_response.VerifyToken, PKCS1v15())
@@ -41,4 +41,3 @@ class LoginHandler(PacketHandler):
         self.connection.compression_threshold = self.mc_connection.compression_threshold
 
         self.connection.send(self.mc_connection.login_success)
-

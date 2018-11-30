@@ -1,6 +1,7 @@
 from zlib import decompress
 from src.networking.types import VarInt
 from src.networking.packets.packet_buffer import PacketBuffer
+from src.networking.packets.packet import Packet
 
 
 class PacketHandler:
@@ -8,8 +9,8 @@ class PacketHandler:
     def __init__(self, connection):
         self.connection = connection
 
-    """ Read the next packet into a packet buffer """
-    def read_packet_buffer(self, write_length=False):
+    """ Read the next packet """
+    def read_packet(self, write_length=False):
         packet_buffer = PacketBuffer()
         length = VarInt.read(self.connection.stream)
 
@@ -32,13 +33,18 @@ class PacketHandler:
                 data = decompress(data)
                 assert(len(data) == decompressed_length)
 
+        id_buffer = PacketBuffer()
+        id_buffer.write(data[:5]) # Only need the first 5 bytes for an ID
+        id_buffer.reset_cursor()
+        id_ = VarInt.read(id_buffer)
+
         if write_length:
             VarInt.write(length, packet_buffer)
 
         packet_buffer.write(data)
         packet_buffer.reset_cursor()
 
-        return packet_buffer
+        return Packet(packet_buffer_=packet_buffer, id=id_)
 
     """ Default behaviour is to consume packets """
     def handle(self):

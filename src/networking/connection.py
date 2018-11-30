@@ -3,7 +3,7 @@ import threading
 
 from .auth import Auth
 from src.networking.encryption import *
-from src.networking.packet_handler.serverbound import LoginHandler as ServerboundLoginHandler
+from src.networking.packet_handler.serverbound import LoginHandler as ServerboundLoginHandler, IdleHandler
 from src.networking.packet_handler.clientbound import LoginHandler as ClientboundLoginHandler
 
 

@@ -3,6 +3,8 @@ from src.networking.packets.clientbound import EncryptionRequest, SetCompression
 from src.networking.encryption import *
 from src.networking.packet_handler import PacketHandler
 
+import select
+
 
 class LoginHandler(PacketHandler):
     def handle(self):
@@ -18,7 +20,7 @@ class LoginHandler(PacketHandler):
         self.connection.send(handshake)
         self.connection.send(login_start)
 
-        encryption_request = EncryptionRequest().read(self.read_packet_buffer())
+        encryption_request = EncryptionRequest().read(self.read_packet().packet_buffer)
         self.connection.VerifyToken = encryption_request.VerifyToken
 
         # Generate the encryption response to send over
@@ -41,14 +43,23 @@ class LoginHandler(PacketHandler):
         self.connection.enable_encryption(shared_secret)
 
         # Enable compression and set the threshold
-        set_compression = SetCompression().read(self.read_packet_buffer())
+        set_compression = SetCompression().read(self.read_packet().packet_buffer)
         self.connection.compression_threshold = set_compression.Threshold
 
         # Now packets are encrypted, so we can switch states after reading the decrypted login success
-        self.connection.login_success = LoginSuccess().read(self.read_packet_buffer())
+        self.connection.login_success = LoginSuccess().read(self.read_packet().packet_buffer)
+
+        # Switch to idling
+        self.connection.packet_handler = IdleHandler(self.connection)
+        self.connection.packet_handler.handle()
 
 
 class IdleHandler(PacketHandler):
     """ Idling occurs when we've disconnected our client or have yet to connect """
-    def __init__(self):
-        super().__init__(self)
+    def handle(self):
+        timeout = 0.05
+        while True:
+            ready_to_read = select.select([self.connection.stream], [], [], timeout)[0]
+
+            if ready_to_read:
+                print(self.read_packet(), flush=True)

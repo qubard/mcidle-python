@@ -9,7 +9,7 @@ class Packet:
     definition = None
 
     def __init__(self, **kwargs):
-        self.packet_buffer = PacketBuffer()
+        self.packet_buffer_ = PacketBuffer()
         self.assert_fields(**kwargs)
         self.set_fields(**kwargs)
 
@@ -19,18 +19,22 @@ class Packet:
 
     @property
     def bytes(self):
-        return self.packet_buffer.bytes
+        return self.packet_buffer_.bytes
+
+    @property
+    def packet_buffer(self):
+        return self.packet_buffer_
 
     def clear(self):
-        self.packet_buffer = PacketBuffer()
+        self.packet_buffer_ = PacketBuffer()
 
     @property
     def buffer(self):
-        return self.packet_buffer
+        return self.packet_buffer_
 
     """ Ensure that the fields match the packet's definition """
     def assert_fields(self, **kwargs):
-        assert not kwargs or set(kwargs.keys()) == set(self.definition.keys()), "Packet fields do not match definition!"
+        assert not kwargs or not self.definition or set(kwargs.keys()) == set(self.definition.keys()), "Packet fields do not match definition!"
 
     """ Read from the packet buffer into the packet's fields """
     def read(self, packet_buffer):
@@ -39,7 +43,7 @@ class Packet:
             val = data_type.read(packet_buffer)
             setattr(self, var_name, val)
 
-        self.packet_buffer = packet_buffer
+        self.packet_buffer_ = packet_buffer
 
         return self
 
@@ -64,8 +68,8 @@ class Packet:
             return self
 
         """ Uncompressed packet """
-        VarInt.write(data_length, self.packet_buffer) # Write the packet length
-        self.packet_buffer.write(packet_buffer.bytes) # Write the data
+        VarInt.write(data_length, self.packet_buffer_) # Write the packet length
+        self.packet_buffer_.write(packet_buffer.bytes) # Write the data
         return self
 
     """ Write the compressed packet to the buffer """
@@ -82,9 +86,9 @@ class Packet:
 
         packet_length = VarInt.write(actual_data_length, PacketBuffer()) + len(data)
 
-        VarInt.write(packet_length, self.packet_buffer)
-        VarInt.write(actual_data_length, self.packet_buffer)
-        self.packet_buffer.write(data)
+        VarInt.write(packet_length, self.packet_buffer_)
+        VarInt.write(actual_data_length, self.packet_buffer_)
+        self.packet_buffer_.write(data)
 
     def __write_fields(self, packet_buffer):
         length = 0
@@ -93,9 +97,6 @@ class Packet:
             data = getattr(self, var_name)
             length += data_type.write(data, packet_buffer)
         return length
-
-    def send(self, socket):
-        socket.send(self.packet_buffer.get_bytes())
 
     def field_string(self, field):
         """ The string representation of the value of a the given named field
@@ -123,7 +124,7 @@ class Packet:
         if fields is not None:
             _str = '%s(%s)' % (_str, ', '.join('%s=%s' %
                                                (k, self.field_string(k)) for k in fields))
-        _str += " | " + str(self.packet_buffer)
+        _str += " | " + str(self.packet_buffer_)
         return _str
 
     def __repr__(self):
