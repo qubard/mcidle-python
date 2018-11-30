@@ -92,3 +92,7 @@ class IdleHandler(PacketHandler):
                             print("Removed", entity_id, flush=True)
                             del self.connection.packet_log[0x03][entity_id] # Delete the entity
                         print("Removed", self.connection.packet_log[0x03].keys(), flush=True)
+
+                # Forward the packets if a client is connected
+                if self.connection.client_connection:
+                    self.connection.client_connection.send_packet_buffer(packet.compressed_buffer)

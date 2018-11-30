@@ -60,3 +60,6 @@ class LoginHandler(PacketHandler):
         self.connection.send_packet(self.mc_connection.login_success)
 
         self.join_world()
+
+        # Let the real connection know about our client
+        self.mc_connection.client_connection = self.connection

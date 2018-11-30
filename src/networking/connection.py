@@ -60,6 +60,8 @@ class MinecraftConnection(Connection):
         self.server = None
         self.server_port = server_port
 
+        self.client_connection = None
+
         self.auth = Auth(username, profile)
 
         # Make sure the access token we are using is still valid
