@@ -14,7 +14,7 @@ class LoginHandler(PacketHandler):
 
     def handle(self):
         Handshake().read(self.read_packet_buffer())
-        login_start = LoginStart().read(self.read_packet_buffer())
+        LoginStart().read(self.read_packet_buffer())
 
         # Generate a (pubkey, privkey) pair
         privkey = rsa.generate_private_key(public_exponent=65537, key_size=2048, backend=default_backend())
