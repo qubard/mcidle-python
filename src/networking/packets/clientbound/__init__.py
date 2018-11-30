@@ -1,5 +1,5 @@
 from src.networking.packets.packet import Packet
-from src.networking.types import String, VarIntPrefixedByteArray, VarInt, Integer, Boolean
+from src.networking.types import String, VarIntPrefixedByteArray, VarInt, Integer, VarIntArray
 
 """
  Note: not using an OrderedDict for `definition` will break
@@ -51,4 +51,11 @@ class SpawnEntity(Packet):
     ids = [0x0, 0x01, 0x03, 0x04, 0x05, 0x25]
     definition = {
         "EntityID": VarInt
+    }
+
+
+class DestroyEntities(Packet):
+    id = 0x32
+    definition = {
+        "Entities": VarIntArray
     }

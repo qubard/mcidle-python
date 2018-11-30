@@ -190,6 +190,23 @@ class Double(Type):
         return stream.write(struct.pack('>d', value))
 
 
+class VarIntArray(Type):
+    @staticmethod
+    def read(stream):
+        count = VarInt.read(stream)
+        arr = []
+        for i in range(0, count):
+            arr.append(VarInt.read(stream))
+        return arr
+
+    @staticmethod
+    def write(values, stream):
+        size = 0
+        for value in values:
+            size += VarInt.write(value, stream)
+        return size
+
+
 class ShortPrefixedByteArray(Type):
     @staticmethod
     def read(stream):

@@ -1,5 +1,6 @@
 from src.networking.packets.serverbound import Handshake, LoginStart, EncryptionResponse
-from src.networking.packets.clientbound import EncryptionRequest, SetCompression, LoginSuccess, ChunkData, UnloadChunk, SpawnEntity
+from src.networking.packets.clientbound import EncryptionRequest, SetCompression, LoginSuccess, ChunkData, \
+    UnloadChunk, SpawnEntity, DestroyEntities
 from src.networking.encryption import *
 from src.networking.packet_handler import PacketHandler
 
@@ -81,3 +82,6 @@ class IdleHandler(PacketHandler):
                 elif packet.id in SpawnEntity.ids:
                     spawn_entity = SpawnEntity().read(packet.packet_buffer)
                     print("Spawned Entity 0x%02x" % packet.id, spawn_entity, flush=True)
+                elif packet.id == 0x32:
+                    destroy_entities = DestroyEntities().read(packet.packet_buffer)
+                    print("Destroy entities", destroy_entities)
