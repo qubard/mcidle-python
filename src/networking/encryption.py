@@ -7,6 +7,7 @@ from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 
 """ Boilerplate from https://github.com/ammaraskar/pyCraft/blob/745aa054b01e74905d64e3e3d649ccc163abab64/minecraft/networking/encryption.py"""
 
+from threading import Lock
 
 def generate_shared_secret():
     return os.urandom(16)
@@ -68,9 +69,11 @@ class EncryptedFileObjectWrapper(object):
     def __init__(self, file_object, decryptor):
         self.actual_file_object = file_object
         self.decryptor = decryptor
+        self.lock = Lock()
 
     def read(self, length):
-        return self.decryptor.update(self.actual_file_object.read(length))
+        with self.lock:
+            return self.decryptor.update(self.actual_file_object.read(length))
 
     def fileno(self):
         return self.actual_file_object.fileno()
@@ -84,12 +87,15 @@ class EncryptedSocketWrapper(object):
         self.actual_socket = socket
         self.encryptor = encryptor
         self.decryptor = decryptor
+        self.lock = Lock()
 
     def recv(self, length):
-        return self.decryptor.update(self.actual_socket.recv(length))
+        with self.lock:
+            return self.decryptor.update(self.actual_socket.recv(length))
 
     def send(self, data):
-        self.actual_socket.send(self.encryptor.update(data))
+        with self.lock:
+            self.actual_socket.send(self.encryptor.update(data))
 
     def fileno(self):
         return self.actual_socket.fileno()

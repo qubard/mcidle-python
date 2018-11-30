@@ -12,10 +12,10 @@ class PacketHandler:
     """ Read the next packet from the stream """
     def read_packet(self):
         packet_buffer = PacketBuffer()
+
         length = VarInt.read(self.connection.stream)
 
         data = self.connection.stream.read(length)
-        decompressed_data = None
 
         id_buffer = PacketBuffer()
 

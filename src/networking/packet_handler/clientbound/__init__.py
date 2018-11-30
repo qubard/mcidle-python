@@ -1,11 +1,13 @@
 from src.networking.packet_handler import PacketHandler
-from src.networking.packets.serverbound import Handshake, LoginStart, EncryptionResponse
+from src.networking.packets.serverbound import Handshake, LoginStart, EncryptionResponse, ClientStatus
 from src.networking.packets.clientbound import EncryptionRequest, SetCompression
 
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric.padding import PKCS1v15
+
+import select
 
 
 class LoginHandler(PacketHandler):
@@ -29,6 +31,9 @@ class LoginHandler(PacketHandler):
         chunk_dict = self.mc_connection.packet_log[0x20]
         for packet in chunk_dict.values():
             self.connection.send_packet_buffer(packet.compressed_buffer)
+
+        # Player sends ClientStatus, this is important for respawning if died
+        self.mc_connection.send_packet(ClientStatus(ActionID=0))
 
     def handle(self):
         Handshake().read(self.read_packet().packet_buffer)
@@ -63,3 +68,13 @@ class LoginHandler(PacketHandler):
 
         # Let the real connection know about our client
         self.mc_connection.client_connection = self.connection
+
+        timeout = 0.05  # Always 50ms
+        while True:
+            ready_to_read = select.select([self.connection.stream], [], [], timeout)[0]
+
+            if ready_to_read:
+                packet = self.read_packet()
+                if packet:
+                    self.mc_connection.send_packet_buffer(packet.compressed_buffer)
+

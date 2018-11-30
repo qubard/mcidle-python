@@ -37,3 +37,17 @@ class EncryptionResponse(Packet):
         "SharedSecret": VarIntPrefixedByteArray,
         "VerifyToken": VarIntPrefixedByteArray
     }
+
+
+class ClientStatus(Packet):
+    id = 0x03
+    definition = {
+        "ActionID": VarInt
+    }
+
+
+class KeepAlive(Packet):
+    id = 0x0B
+    definition = {
+        "KeepAliveID": Long
+    }

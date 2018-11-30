@@ -1,8 +1,10 @@
 from src.networking.packets.serverbound import Handshake, LoginStart, EncryptionResponse
 from src.networking.packets.clientbound import EncryptionRequest, SetCompression, LoginSuccess, ChunkData, \
-    UnloadChunk, SpawnEntity, DestroyEntities
+    UnloadChunk, SpawnEntity, DestroyEntities, KeepAlive
 from src.networking.encryption import *
 from src.networking.packet_handler import PacketHandler
+
+from src.networking.packets.serverbound import KeepAlive as KeepAliveServerbound
 
 import select
 
@@ -65,34 +67,38 @@ class IdleHandler(PacketHandler):
             if ready_to_read:
                 packet = self.read_packet()
 
-                if packet.id in self.connection.join_ids:
-                    self.connection.packet_log[packet.id] = packet
-                    print("Packet ID: 0x%02x" % packet.id)
-                elif packet.id == 0x20: # ChunkData
-                    chunk_data = ChunkData().read(packet.packet_buffer)
-                    if packet.id not in self.connection.packet_log:
-                        self.connection.packet_log[packet.id] = {}
-                    self.connection.packet_log[packet.id][(chunk_data.ChunkX, chunk_data.ChunkY)] = packet
-                    print("ChunkData", chunk_data.ChunkX, chunk_data.ChunkY)
-                elif packet.id == 0x1D: # UnloadChunk
-                    unload_chunk = UnloadChunk().read(packet.packet_buffer)
-                    if 0x20 in self.connection.packet_log:
-                        del self.connection.packet_log[0x20][(unload_chunk.ChunkX, unload_chunk.chunkY)]
-                    print("UnloadChunk", unload_chunk.ChunkX, unload_chunk.ChunkY)
-                elif packet.id in SpawnEntity.ids:
-                    spawn_entity = SpawnEntity().read(packet.packet_buffer)
-                    if 0x03 not in self.connection.packet_log:
-                        self.connection.packet_log[0x03] = {}
-                    self.connection.packet_log[0x03][spawn_entity.EntityID] = packet
-                    print("Added", self.connection.packet_log[0x03].keys(), flush=True)
-                elif packet.id == 0x32:
-                    destroy_entities = DestroyEntities().read(packet.packet_buffer)
-                    if 0x03 in self.connection.packet_log:
-                        for entity_id in destroy_entities.Entities:
-                            print("Removed", entity_id, flush=True)
-                            del self.connection.packet_log[0x03][entity_id] # Delete the entity
-                        print("Removed", self.connection.packet_log[0x03].keys(), flush=True)
+                if packet:
+                    if packet.id in self.connection.join_ids:
+                        self.connection.packet_log[packet.id] = packet
+                    elif packet.id == 0x20: # ChunkData
+                        chunk_data = ChunkData().read(packet.packet_buffer)
+                        if packet.id not in self.connection.packet_log:
+                            self.connection.packet_log[packet.id] = {}
+                        self.connection.packet_log[packet.id][(chunk_data.ChunkX, chunk_data.ChunkY)] = packet
+                        print("ChunkData", chunk_data.ChunkX, chunk_data.ChunkY)
+                    elif packet.id == 0x1D: # UnloadChunk
+                        unload_chunk = UnloadChunk().read(packet.packet_buffer)
+                        if 0x20 in self.connection.packet_log:
+                            del self.connection.packet_log[0x20][(unload_chunk.ChunkX, unload_chunk.ChunkY)]
+                        print("UnloadChunk", unload_chunk.ChunkX, unload_chunk.ChunkY)
+                    elif packet.id in SpawnEntity.ids:
+                        spawn_entity = SpawnEntity().read(packet.packet_buffer)
+                        if 0x03 not in self.connection.packet_log:
+                            self.connection.packet_log[0x03] = {}
+                        self.connection.packet_log[0x03][spawn_entity.EntityID] = packet
+                        print("Added", self.connection.packet_log[0x03].keys(), flush=True)
+                    elif packet.id == 0x32:
+                        destroy_entities = DestroyEntities().read(packet.packet_buffer)
+                        if 0x03 in self.connection.packet_log:
+                            for entity_id in destroy_entities.Entities:
+                                print("Removed", entity_id, flush=True)
+                                del self.connection.packet_log[0x03][entity_id] # Delete the entity
+                            print("Removed", self.connection.packet_log[0x03].keys(), flush=True)
+                    elif packet.id == 0x1F and not self.connection.client_connection: # Keep Alive Clientbound
+                        keep_alive = KeepAlive().read(packet.packet_buffer)
+                        print("Responded to KeepAlive", keep_alive, flush=True)
+                        self.connection.send_packet(KeepAliveServerbound(KeepAliveID=keep_alive.KeepAliveID))
 
-                # Forward the packets if a client is connected
-                if self.connection.client_connection:
-                    self.connection.client_connection.send_packet_buffer(packet.compressed_buffer)
+                    # Forward the packets if a client is connected
+                    if self.connection.client_connection:
+                        self.connection.client_connection.send_packet_buffer(packet.compressed_buffer)
