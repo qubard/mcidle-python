@@ -92,6 +92,7 @@ class Packet:
         VarInt.write(packet_length, self.packet_buffer_)
         VarInt.write(actual_data_length, self.packet_buffer_)
         self.packet_buffer_.write(data)
+        self.compressed_buffer = self.packet_buffer
 
     def __write_fields(self, packet_buffer):
         length = 0

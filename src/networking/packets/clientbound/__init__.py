@@ -1,5 +1,6 @@
 from src.networking.packets.packet import Packet
-from src.networking.types import String, VarIntPrefixedByteArray, VarInt, Integer, VarIntArray, Long, Byte
+from src.networking.types import String, VarIntPrefixedByteArray, VarInt, Integer, VarIntArray, \
+    Long, Byte, Double, Float
 
 """
  Note: not using an OrderedDict for `definition` will break
@@ -48,7 +49,8 @@ class UnloadChunk(Packet):
 
 
 class SpawnEntity(Packet):
-    ids = [0x0, 0x01, 0x03, 0x04, 0x05, 0x25]
+    id = 0x03
+    ids = [0x00, 0x01, 0x03, 0x04, 0x05, 0x25]
     definition = {
         "EntityID": VarInt
     }
@@ -73,4 +75,17 @@ class ChatMessage(Packet):
     definition = {
         "Chat": String,
         "Position": Byte
+    }
+
+
+class PlayerPositionAndLook(Packet):
+    id = 0x2F
+    definition = {
+        "X": Double,
+        "Y": Double,
+        "Z": Double,
+        "Yaw": Float,
+        "Pitch": Float,
+        "Flags": Byte,
+        "TeleportID": VarInt
     }

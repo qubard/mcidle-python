@@ -1,6 +1,8 @@
 from src.networking.packet_handler import PacketHandler
-from src.networking.packets.serverbound import Handshake, LoginStart, EncryptionResponse, ClientStatus
-from src.networking.packets.clientbound import EncryptionRequest, SetCompression
+from src.networking.packets.serverbound import Handshake, LoginStart, EncryptionResponse, ClientStatus, \
+    PlayerPosition, PlayerPositionAndLook
+from src.networking.packets.clientbound import EncryptionRequest, SetCompression, SpawnEntity
+from src.networking.packets.clientbound import PlayerPositionAndLook as PlayerPositionAndLookClientbound
 
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives.asymmetric import rsa
@@ -9,11 +11,27 @@ from cryptography.hazmat.primitives.asymmetric.padding import PKCS1v15
 
 import select
 
+from random import randrange
 
 class LoginHandler(PacketHandler):
     def __init__(self, connection, mc_connection):
         super().__init__(connection)
         self.mc_connection = mc_connection
+
+    def handle_position_packet(self, packet):
+        pos_packet = None
+        if packet.id == PlayerPosition.id: # Player Position
+            pos_packet = PlayerPosition().read(packet.packet_buffer)
+        elif packet.id == PlayerPositionAndLook.id: # Player Position And Look
+            pos_packet = PlayerPositionAndLook().read(packet.packet_buffer)
+
+        if pos_packet:
+            # Replace the currently logged PlayerPositionAndLookClientbound packet
+            if PlayerPositionAndLookClientbound.id in self.mc_connection.packet_log:
+                self.mc_connection.packet_log[PlayerPositionAndLookClientbound.id] = PlayerPositionAndLookClientbound(\
+                    X=pos_packet.X, Y=pos_packet.Y, Z=pos_packet.Z, \
+                    Yaw=0, Pitch=0, Flags=0, TeleportID=randrange(0, 9999999))\
+                    .write(self.mc_connection.compression_threshold)
 
     def join_world(self):
         # Send the player all the packets that lets them join the world
@@ -29,8 +47,8 @@ class LoginHandler(PacketHandler):
                 self.connection.send_packet_buffer(packet.compressed_buffer)
 
         # Send the player all the currently loaded entities
-        if 0x03 in self.mc_connection.packet_log:
-            entity_dict = self.mc_connection.packet_log[0x03]
+        if SpawnEntity.id in self.mc_connection.packet_log:
+            entity_dict = self.mc_connection.packet_log[SpawnEntity.id]
             for packet in entity_dict.values():
                 self.connection.send_packet_buffer(packet.compressed_buffer)
 
@@ -87,6 +105,7 @@ class LoginHandler(PacketHandler):
                     if ready_to_read:
                         packet = self.read_packet()
                         if packet:
+                            self.handle_position_packet(packet)
                             self.mc_connection.send_packet_buffer(packet.compressed_buffer)
             except:
                 self.connection.reset_socket()

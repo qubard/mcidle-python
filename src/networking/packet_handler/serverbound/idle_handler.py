@@ -19,43 +19,43 @@ class IdleHandler(PacketHandler):
                 if packet:
                     if packet.id in self.connection.join_ids:
                         self.connection.packet_log[packet.id] = packet
-                    elif packet.id == 0x20: # ChunkData
+                    elif packet.id == ChunkData.id: # ChunkData
                         chunk_data = ChunkData().read(packet.packet_buffer)
                         if packet.id not in self.connection.packet_log:
                             self.connection.packet_log[packet.id] = {}
                         self.connection.packet_log[packet.id][(chunk_data.ChunkX, chunk_data.ChunkY)] = packet
                         print("ChunkData", chunk_data.ChunkX, chunk_data.ChunkY)
-                    elif packet.id == 0x1D: # UnloadChunk
+                    elif packet.id == UnloadChunk.id: # UnloadChunk
                         unload_chunk = UnloadChunk().read(packet.packet_buffer)
                         if 0x20 in self.connection.packet_log:
-                            del self.connection.packet_log[0x20][(unload_chunk.ChunkX, unload_chunk.ChunkY)]
+                            del self.connection.packet_log[ChunkData.id][(unload_chunk.ChunkX, unload_chunk.ChunkY)]
                             print("UnloadChunk", unload_chunk.ChunkX, unload_chunk.ChunkY)
                     elif packet.id in SpawnEntity.ids:
                         spawn_entity = SpawnEntity().read(packet.packet_buffer)
-                        if 0x03 not in self.connection.packet_log:
-                            self.connection.packet_log[0x03] = {}
-                        self.connection.packet_log[0x03][spawn_entity.EntityID] = packet
-                        print("Added entity ID: %s" % spawn_entity.EntityID, self.connection.packet_log[0x03].keys(), flush=True)
-                    elif packet.id == 0x32:
+                        if SpawnEntity.id not in self.connection.packet_log:
+                            self.connection.packet_log[SpawnEntity.id] = {}
+                        self.connection.packet_log[SpawnEntity.id][spawn_entity.EntityID] = packet
+                        print("Added entity ID: %s" % spawn_entity.EntityID, self.connection.packet_log[SpawnEntity.id].keys(), flush=True)
+                    elif packet.id == DestroyEntities.id:
                         destroy_entities = DestroyEntities().read(packet.packet_buffer)
-                        if 0x03 in self.connection.packet_log:
+                        if SpawnEntity.id in self.connection.packet_log:
                             for entity_id in destroy_entities.Entities:
-                                print("Removed entity ID: %s" % entity_id, self.connection.packet_log[0x03].keys(), flush=True)
-                                del self.connection.packet_log[0x03][entity_id] # Delete the entity
-                    elif packet.id == 0x1F: # Keep Alive Clientbound
+                                print("Removed entity ID: %s" % entity_id, self.connection.packet_log[SpawnEntity.id].keys(), flush=True)
+                                del self.connection.packet_log[SpawnEntity.id][entity_id] # Delete the entity
+                    elif packet.id == KeepAlive.id: # KeepAlive Clientbound
                         keep_alive = KeepAlive().read(packet.packet_buffer)
                         print("Responded to KeepAlive", keep_alive, flush=True)
                         self.connection.send_packet(KeepAliveServerbound(KeepAliveID=keep_alive.KeepAliveID))
-                    elif packet.id == 0x2E:
+                    elif packet.id == 0x2E: # PlayerListItem
                         if 0x2E not in self.connection.packet_log:
                             self.connection.packet_log[0x2E] = []
                         self.connection.packet_log[0x2E].append(packet)
-                    elif packet.id == 0x0F:
+                    elif packet.id == ChatMessage.id:
                         chat_message = ChatMessage().read(packet.packet_buffer)
                         print(chat_message, flush=True)
 
                     # Forward the packets if a client is connected, don't send KeepAlive
-                    if self.connection.client_connection and self.connection.client_connection.connected and packet.id != 0x1F:
+                    if self.connection.client_connection and self.connection.client_connection.connected and packet.id != KeepAlive.id:
                         try:
                             self.connection.client_connection.send_packet_buffer(packet.compressed_buffer)
                         except ConnectionAbortedError:

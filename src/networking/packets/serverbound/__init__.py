@@ -1,5 +1,6 @@
 from src.networking.packets.packet import Packet
-from src.networking.types import String, Long, UnsignedShort, VarInt, VarIntPrefixedByteArray
+from src.networking.types import String, Long, UnsignedShort, VarInt, VarIntPrefixedByteArray, \
+    Double, Float, Boolean
 
 """
  Note: not using an OrderedDict for `definition` will break
@@ -50,4 +51,26 @@ class KeepAlive(Packet):
     id = 0x0B
     definition = {
         "KeepAliveID": Long
+    }
+
+
+class PlayerPosition(Packet):
+    id = 0x0D
+    definition = {
+        "X": Double,
+        "Y": Double,
+        "Z": Double,
+        "OnGround": Boolean
+    }
+
+
+class PlayerPositionAndLook(Packet):
+    id = 0x0E
+    definition = {
+        "X": Double,
+        "Y": Double,
+        "Z": Double,
+        "Yaw": Float,
+        "Pitch": Float,
+        "OnGround": Boolean
     }
