@@ -5,9 +5,8 @@ from cryptography.hazmat.primitives.asymmetric.padding import PKCS1v15
 from cryptography.hazmat.primitives.serialization import load_der_public_key
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 
-""" Boilerplate from https://github.com/ammaraskar/pyCraft/blob/745aa054b01e74905d64e3e3d649ccc163abab64/minecraft/networking/encryption.py"""
+from threading import RLock
 
-from threading import Lock
 
 def generate_shared_secret():
     return os.urandom(16)
@@ -69,7 +68,7 @@ class EncryptedFileObjectWrapper(object):
     def __init__(self, file_object, decryptor):
         self.actual_file_object = file_object
         self.decryptor = decryptor
-        self.lock = Lock()
+        self.lock = RLock()
 
     def read(self, length):
         with self.lock:
@@ -87,7 +86,7 @@ class EncryptedSocketWrapper(object):
         self.actual_socket = socket
         self.encryptor = encryptor
         self.decryptor = decryptor
-        self.lock = Lock()
+        self.lock = RLock()
 
     def recv(self, length):
         with self.lock:

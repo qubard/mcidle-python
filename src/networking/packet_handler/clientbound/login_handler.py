@@ -37,6 +37,7 @@ class LoginHandler(PacketHandler):
         if 0x20 in self.mc_connection.packet_log:
             # Send the player all the currently loaded chunks
             chunk_dict = self.mc_connection.packet_log[0x20]
+            print("Sending %s chunks" % len(chunk_dict.values()), flush=True)
             for packet in chunk_dict.values():
                 self.connection.send_packet_buffer(packet.compressed_buffer)
 

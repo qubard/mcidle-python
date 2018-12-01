@@ -17,8 +17,6 @@ class Auth:
     Represents an authentication token.
 
     See http://wiki.vg/Authentication.
-
-    Boilerplate from https://github.com/ammaraskar/pyCraft/blob/master/minecraft/authentication.py
     """
     AGENT_NAME = "Minecraft"
     AGENT_VERSION = 1
