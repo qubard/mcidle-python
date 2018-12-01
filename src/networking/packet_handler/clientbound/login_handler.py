@@ -9,17 +9,24 @@ from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric.padding import PKCS1v15
 
-import select
+import select, time
 
 from random import randrange
+
 
 class LoginHandler(PacketHandler):
     def __init__(self, connection, mc_connection):
         super().__init__(connection)
         self.mc_connection = mc_connection
+        self.last_handled_pos = 0
+        self.pos_handle_rate = 10 # Every 10 seconds handle a position packet
 
     def handle_position_packet(self, packet):
         pos_packet = None
+        if not (packet.id == PlayerPosition.id or packet.id == PlayerPositionAndLook.id) or \
+                time.time() - self.last_handled_pos <= self.pos_handle_rate:
+            return
+
         if packet.id == PlayerPosition.id: # Player Position
             pos_packet = PlayerPosition().read(packet.packet_buffer)
         elif packet.id == PlayerPositionAndLook.id: # Player Position And Look
@@ -32,6 +39,7 @@ class LoginHandler(PacketHandler):
                     X=pos_packet.X, Y=pos_packet.Y, Z=pos_packet.Z, \
                     Yaw=0, Pitch=0, Flags=0, TeleportID=randrange(0, 9999999))\
                     .write(self.mc_connection.compression_threshold)
+                self.last_handled_pos = time.time()
 
     def join_world(self):
         # Send the player all the packets that lets them join the world
