@@ -120,5 +120,3 @@ class MinecraftServer(Connection):
 
         # Replace the server socket with the client's socket
         self.initialize_socket(connection)
-
-        print("Got client", connection, address, flush=True)

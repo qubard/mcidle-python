@@ -1,5 +1,5 @@
 from src.networking.packets.packet import Packet
-from src.networking.types import String, VarIntPrefixedByteArray, VarInt, Integer, VarIntArray, Long
+from src.networking.types import String, VarIntPrefixedByteArray, VarInt, Integer, VarIntArray, Long, Byte
 
 """
  Note: not using an OrderedDict for `definition` will break
@@ -65,4 +65,12 @@ class KeepAlive(Packet):
     id = 0x1F
     definition = {
         "KeepAliveID": Long
+    }
+
+
+class ChatMessage(Packet):
+    id = 0x0F
+    definition = {
+        "Chat": String,
+        "Position": Byte
     }

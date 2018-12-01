@@ -1,6 +1,6 @@
 from src.networking.packets.serverbound import Handshake, LoginStart, EncryptionResponse
 from src.networking.packets.clientbound import EncryptionRequest, SetCompression, LoginSuccess, ChunkData, \
-    UnloadChunk, SpawnEntity, DestroyEntities, KeepAlive
+    UnloadChunk, SpawnEntity, DestroyEntities, KeepAlive, ChatMessage
 from src.networking.encryption import *
 from src.networking.packet_handler import PacketHandler
 
@@ -101,6 +101,9 @@ class IdleHandler(PacketHandler):
                         if 0x2E not in self.connection.packet_log:
                             self.connection.packet_log[0x2E] = []
                         self.connection.packet_log[0x2E].append(packet)
+                    elif packet.id == 0x0F:
+                        chat_message = ChatMessage().read(packet.packet_buffer)
+                        print(chat_message, flush=True)
 
                     # Forward the packets if a client is connected, don't send KeepAlive
                     if self.connection.client_connection and self.connection.client_connection.connected and packet.id != 0x1F:
