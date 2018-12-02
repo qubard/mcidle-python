@@ -13,6 +13,7 @@ class Connection(threading.Thread):
         self.threshold = None
         self.address = (ip, port)
         self.packet_handler = None
+        self.running = False
 
         self.socket = None
         self.stream = None
@@ -56,6 +57,7 @@ class Connection(threading.Thread):
         self.socket.send(packet_buffer.bytes)
 
     def run(self):
+        self.running = True
         self.initialize_connection()
         if self.packet_handler is not None:
             self.packet_handler.handle()
@@ -80,8 +82,8 @@ class MinecraftConnection(Connection):
         self.packet_handler = ServerboundLoginHandler(self)
 
         """ JoinGame, PluginMessage, ServerDifficulty, SpawnPosition,
-         PlayerAbilities, PlayerPosLook, Respawn """
-        self.join_ids = [0x23, 0x09, 0x0D, 0x46, 0x2C, 0x2F, 0x35]
+         PlayerAbilities, Respawn """
+        self.join_ids = [0x23, 0x09, 0x0D, 0x46, 0x2C, 0x35]
         self.packet_log = {} # Keep track of all the packets for re-sending upon connection
 
     """ Connect to the socket and start a connection thread """

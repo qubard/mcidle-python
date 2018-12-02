@@ -91,6 +91,13 @@ class PlayerPositionAndLook(Packet):
     }
 
 
+class Disconnect(Packet):
+    id = 0x1A
+    definition = {
+        "Reason": String
+    }
+
+
 class PlayerListItem(Packet):
     id = 0x2E
     definition = {

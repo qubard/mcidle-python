@@ -51,6 +51,12 @@ class LoginHandler(PacketHandler):
                 packet = self.mc_connection.packet_log[id_]
                 self.connection.send_packet_buffer(packet.compressed_buffer)
 
+        # Send them their last position/look if it exists
+        if PlayerPositionAndLookClientbound.id in self.mc_connection.packet_log:
+            self.connection.send_packet_buffer(
+                self.mc_connection.packet_log[PlayerPositionAndLookClientbound.id] \
+                .compressed_buffer)
+
         # Send the player list items (to see other players)
         if PlayerListItem.id in self.mc_connection.packet_log:
             player_lists = self.mc_connection.packet_log[PlayerListItem.id]
@@ -70,14 +76,8 @@ class LoginHandler(PacketHandler):
             for packet in chunk_dict.values():
                 self.connection.send_packet_buffer(packet.compressed_buffer)
 
-        # Send them their last position/look if it exists
-        if PlayerPositionAndLookClientbound.id in self.mc_connection.packet_log:
-            self.connection.send_packet_buffer(self.mc_connection.packet_log[PlayerPositionAndLookClientbound.id] \
-                                               .compressed_buffer)
-
         # Player sends ClientStatus, this is important for respawning if died
         self.mc_connection.send_packet(ClientStatus(ActionID=0))
-        print("Sent ClientStatus", flush=True)
 
     def handle(self):
         Handshake().read(self.read_packet().packet_buffer)
@@ -114,14 +114,14 @@ class LoginHandler(PacketHandler):
         self.mc_connection.client_connection = self.connection
 
         timeout = 0.05 # Always 50ms
-        while True:
+        while self.connection.running:
             try:
                 if self.connection.connected:
                     ready_to_read = select.select([self.connection.stream], [], [], timeout)[0]
 
                     if ready_to_read:
                         packet = self.read_packet()
-                        print("C->S", packet, flush=True)
+                        print("Sent C->S ID: 0x%02x" % packet.id)
                         self.handle_position_packet(packet)
                         self.mc_connection.send_packet_buffer(packet.compressed_buffer)
             except:
