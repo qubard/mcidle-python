@@ -62,4 +62,5 @@ class IdleHandler(PacketHandler):
                     try:
                         self.connection.client_connection.send_packet_buffer(packet.compressed_buffer)
                     except ConnectionAbortedError:
+                        print("S->C Exception", flush=True)
                         pass

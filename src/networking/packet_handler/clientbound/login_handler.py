@@ -20,7 +20,7 @@ class LoginHandler(PacketHandler):
         super().__init__(connection)
         self.mc_connection = mc_connection
         self.last_handled_pos = 0
-        self.pos_handle_rate = 5 # Every 5 seconds handle a position packet
+        self.pos_handle_rate = 2 # Every 2 seconds handle a position packet
 
     def handle_position_packet(self, packet):
         if not (packet.id == PlayerPosition.id or packet.id == PlayerPositionAndLook.id) or \
@@ -37,9 +37,9 @@ class LoginHandler(PacketHandler):
         if pos_packet:
             # Replace the currently logged PlayerPositionAndLookClientbound packet
             if PlayerPositionAndLookClientbound.id in self.mc_connection.packet_log:
-                self.mc_connection.packet_log[PlayerPositionAndLookClientbound.id] = PlayerPositionAndLookClientbound(\
+                self.mc_connection.packet_log[PlayerPositionAndLookClientbound.id] = PlayerPositionAndLookClientbound( \
                     X=pos_packet.X, Y=pos_packet.Y, Z=pos_packet.Z, \
-                    Yaw=0, Pitch=0, Flags=0, TeleportID=randrange(0, 9999999))\
+                    Yaw=0, Pitch=0, Flags=0, TeleportID=randrange(0, 9999999)) \
                     .write(self.mc_connection.compression_threshold)
                 self.last_handled_pos = time.time()
                 print("Handled position packet", pos_packet, flush=True)
@@ -69,6 +69,11 @@ class LoginHandler(PacketHandler):
             print("Sending %s chunks" % len(chunk_dict.values()), flush=True)
             for packet in chunk_dict.values():
                 self.connection.send_packet_buffer(packet.compressed_buffer)
+
+        # Send them their last position/look if it exists
+        if PlayerPositionAndLookClientbound.id in self.mc_connection.packet_log:
+            self.connection.send_packet_buffer(self.mc_connection.packet_log[PlayerPositionAndLookClientbound.id] \
+                                               .compressed_buffer)
 
         # Player sends ClientStatus, this is important for respawning if died
         self.mc_connection.send_packet(ClientStatus(ActionID=0))
