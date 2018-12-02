@@ -50,7 +50,7 @@ class Packet:
         self.read_fields(packet_buffer)
 
         self.packet_buffer_ = packet_buffer
-        self.packet_buffer.reset_cursor()
+        self.packet_buffer_.reset_cursor()
 
         return self
 
@@ -71,8 +71,7 @@ class Packet:
 
         """ Apply compression if needed """
         if compression_threshold:
-            self.__write_compressed(packet_buffer, data_length, data_length >= compression_threshold)
-            return self
+            return self.__write_compressed(packet_buffer, data_length, data_length >= compression_threshold)
 
         """ Uncompressed packet """
         VarInt.write(data_length, self.packet_buffer_) # Write the packet length
@@ -86,17 +85,17 @@ class Packet:
 
         if is_compressed:
             data = compress(data)
-            actual_data_length = VarInt.write(data_length, PacketBuffer()) + len(data)
 
         # Clear the last packet buffer to be overwritten
         packet_buffer.clear()
 
-        packet_length = VarInt.write(actual_data_length, PacketBuffer()) + len(data)
+        packet_length = VarInt.write(actual_data_length, PacketBuffer()) + data_length
 
         VarInt.write(packet_length, self.packet_buffer_)
         VarInt.write(actual_data_length, self.packet_buffer_)
         self.packet_buffer_.write(data)
-        self.compressed_buffer = self.packet_buffer
+        self.compressed_buffer = self.packet_buffer_
+        return self
 
     def __write_fields(self, packet_buffer):
         length = 0
