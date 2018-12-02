@@ -72,6 +72,10 @@ class MinecraftConnection(Connection):
         self.server = None
         self.server_port = server_port
 
+        self.last_pos_packet = None
+        self.last_yaw = 0
+        self.last_pitch = 0
+
         self.client_connection = None
 
         self.auth = Auth(username, profile)
@@ -81,9 +85,8 @@ class MinecraftConnection(Connection):
 
         self.packet_handler = ServerboundLoginHandler(self)
 
-        """ JoinGame, PluginMessage, ServerDifficulty, SpawnPosition,
-         PlayerAbilities, Respawn """
-        self.join_ids = [0x23, 0x09, 0x0D, 0x46, 0x2C, 0x35]
+        """ JoinGame, ServerDifficulty, SpawnPosition, PlayerAbilities, Respawn """
+        self.join_ids = [0x23, 0x0D, 0x46, 0x2C, 0x35]
         self.packet_log = {} # Keep track of all the packets for re-sending upon connection
 
     """ Connect to the socket and start a connection thread """

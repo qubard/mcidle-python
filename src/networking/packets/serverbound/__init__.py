@@ -15,6 +15,13 @@ class KeepAlive(Packet):
     }
 
 
+class TeleportConfirm(Packet):
+    id = 0x00
+    definition = {
+        "TeleportID": VarInt
+    }
+
+
 class Handshake(Packet):
     id = 0x00
     definition = {

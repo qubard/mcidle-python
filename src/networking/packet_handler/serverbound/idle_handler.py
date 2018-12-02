@@ -1,5 +1,5 @@
 from src.networking.packet_handler import PacketHandler
-from src.networking.packets.serverbound import KeepAlive as KeepAliveServerbound
+from src.networking.packets.serverbound import KeepAlive as KeepAliveServerbound, TeleportConfirm
 from src.networking.packets.clientbound import ChunkData, UnloadChunk, SpawnEntity, Disconnect, \
     DestroyEntities, KeepAlive, ChatMessage, PlayerListItem, PlayerPositionAndLook
 
@@ -42,7 +42,7 @@ class IdleHandler(PacketHandler):
                             for entity_id in destroy_entities.Entities:
                                 print("Removed entity ID: %s" % entity_id, self.connection.packet_log[SpawnEntity.id].keys(), flush=True)
                                 del self.connection.packet_log[SpawnEntity.id][entity_id] # Delete the entity
-                    elif packet.id == KeepAlive.id: # KeepAlive Clientbound
+                    elif packet.id == KeepAlive.id and not self.connection.client_connection: # KeepAlive Clientbound
                         keep_alive = KeepAlive().read(packet.packet_buffer)
                         print("Responded to KeepAlive", keep_alive, flush=True)
                         self.connection.send_packet(KeepAliveServerbound(KeepAliveID=keep_alive.KeepAliveID))
@@ -52,18 +52,22 @@ class IdleHandler(PacketHandler):
                             self.connection.packet_log[packet.id] = []
                         if player_list_item.Action == 0 or player_list_item.Action == 4:
                             self.connection.packet_log[packet.id].append(packet)
-                            print(player_list_item, flush=True)
                     elif packet.id == ChatMessage.id:
                         chat_message = ChatMessage().read(packet.packet_buffer)
                         print(chat_message, flush=True)
-                    elif packet.id == PlayerPositionAndLook.id and packet.id not in self.connection.packet_log:
+                    elif packet.id == PlayerPositionAndLook.id:
+                        pos_packet = PlayerPositionAndLook().read(packet.packet_buffer)
+
+                        # Send back a teleport confirm
+                        self.connection.send_packet(TeleportConfirm(TeleportID=pos_packet.TeleportID))
+
                         self.connection.packet_log[packet.id] = packet
                     elif packet.id == Disconnect.id:
                         print(Disconnect.read(packet.packet_buffer), flush=True)
 
-                    # Forward the packets if a client is connected, don't send KeepAlive
+                    # Forward the packets if a client is connected
                     if self.connection.client_connection and self.connection.client_connection.connected \
-                            and packet.id != KeepAlive.id:
+                            and packet.id != PlayerPositionAndLook.id:
                         try:
                             self.connection.client_connection.send_packet_buffer(packet.compressed_buffer)
                         except ConnectionAbortedError:

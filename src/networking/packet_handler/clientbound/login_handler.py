@@ -1,6 +1,6 @@
 from src.networking.packet_handler import PacketHandler
 from src.networking.packets.serverbound import Handshake, LoginStart, EncryptionResponse, ClientStatus, \
-    PlayerPosition, PlayerPositionAndLook, ClickWindow
+    PlayerPositionAndLook, TeleportConfirm
 from src.networking.packets.clientbound import EncryptionRequest, SetCompression, SpawnEntity, ChunkData, \
     PlayerListItem
 from src.networking.packets.clientbound import PlayerPositionAndLook as PlayerPositionAndLookClientbound
@@ -10,39 +10,26 @@ from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric.padding import PKCS1v15
 
-import select, time
-
-from random import randrange
+import select
 
 
 class LoginHandler(PacketHandler):
     def __init__(self, connection, mc_connection):
         super().__init__(connection)
         self.mc_connection = mc_connection
-        self.last_handled_pos = 0
-        self.pos_handle_rate = 2 # Every 2 seconds handle a position packet
+        self.teleport_id = 1
 
     def handle_position_packet(self, packet):
-        if not (packet.id == PlayerPosition.id or packet.id == PlayerPositionAndLook.id) or \
-                time.time() - self.last_handled_pos <= self.pos_handle_rate:
+        if packet.id != PlayerPositionAndLook.id:
             return
 
-        pos_packet = None
+        pos_packet = PlayerPositionAndLook().read(packet.packet_buffer)
+        self.mc_connection.last_yaw = pos_packet.Yaw
+        self.mc_connection.last_pitch = pos_packet.Pitch
+        self.mc_connection.last_pos_packet = pos_packet
 
-        if packet.id == PlayerPosition.id: # Player Position
-            pos_packet = PlayerPosition().read(packet.packet_buffer)
-        elif packet.id == PlayerPositionAndLook.id: # Player Position And Look
-            pos_packet = PlayerPositionAndLook().read(packet.packet_buffer)
-
-        if pos_packet:
-            # Replace the currently logged PlayerPositionAndLookClientbound packet
-            if PlayerPositionAndLookClientbound.id in self.mc_connection.packet_log:
-                self.mc_connection.packet_log[PlayerPositionAndLookClientbound.id] = PlayerPositionAndLookClientbound( \
-                    X=pos_packet.X, Y=pos_packet.Y, Z=pos_packet.Z, \
-                    Yaw=0, Pitch=0, Flags=0, TeleportID=randrange(0, 9999999)) \
-                    .write(self.mc_connection.compression_threshold)
-                self.last_handled_pos = time.time()
-                print("Handled position packet", pos_packet, flush=True)
+        # Replace the currently logged PlayerPositionAndLookClientbound packet
+        self.mc_connection.last_pos_packet = pos_packet
 
     def join_world(self):
         # Send the player all the packets that lets them join the world
@@ -53,9 +40,18 @@ class LoginHandler(PacketHandler):
 
         # Send them their last position/look if it exists
         if PlayerPositionAndLookClientbound.id in self.mc_connection.packet_log:
-            self.connection.send_packet_buffer(
-                self.mc_connection.packet_log[PlayerPositionAndLookClientbound.id] \
-                .compressed_buffer)
+            if self.mc_connection and self.mc_connection.last_pos_packet:
+                last_packet = self.mc_connection.last_pos_packet
+
+                pos_packet = PlayerPositionAndLookClientbound( \
+                    X=last_packet.X, Y=last_packet.Y, Z=last_packet.Z, \
+                    Yaw=self.mc_connection.last_yaw, Pitch=self.mc_connection.last_pitch, Flags=0, TeleportID=self.teleport_id)
+                self.teleport_id += 1
+                self.connection.send_packet(pos_packet)
+            else:
+                self.connection.send_packet_buffer(
+                    self.mc_connection.packet_log[PlayerPositionAndLookClientbound.id] \
+                        .compressed_buffer)  # Send the last packet that we got
 
         # Send the player list items (to see other players)
         if PlayerListItem.id in self.mc_connection.packet_log:
@@ -121,9 +117,9 @@ class LoginHandler(PacketHandler):
 
                     if ready_to_read:
                         packet = self.read_packet()
-                        print("Sent C->S ID: 0x%02x" % packet.id)
-                        self.handle_position_packet(packet)
-                        self.mc_connection.send_packet_buffer(packet.compressed_buffer)
+                        if packet.id != TeleportConfirm.id: # Sending these will crash us
+                            self.handle_position_packet(packet)
+                            self.mc_connection.send_packet_buffer(packet.compressed_buffer)
             except:
                 self.mc_connection.client_connection = None
                 self.connection.reset_socket()
