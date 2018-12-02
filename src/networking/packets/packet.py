@@ -37,13 +37,17 @@ class Packet:
     def assert_fields(self, **kwargs):
         assert not kwargs or not self.definition or set(kwargs.keys()) == set(self.definition.keys()), "Packet fields do not match definition!"
 
-    """ Read from the packet buffer into the packet's fields """
-    def read(self, packet_buffer):
-        id_ = VarInt.read(packet_buffer)
-        assert(id_ == self.id or (self.ids and id_ in self.ids))
+    def read_fields(self, packet_buffer):
         for var_name, data_type in self.definition.items():
             val = data_type.read(packet_buffer)
             setattr(self, var_name, val)
+
+    """ Read from the packet buffer into the packet's fields """
+    def read(self, packet_buffer):
+        id_ = VarInt.read(packet_buffer)
+        assert (id_ == self.id or (self.ids and id_ in self.ids))
+
+        self.read_fields(packet_buffer)
 
         self.packet_buffer_ = packet_buffer
         self.packet_buffer.reset_cursor()

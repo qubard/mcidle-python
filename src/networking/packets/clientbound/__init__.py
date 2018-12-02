@@ -1,6 +1,6 @@
 from src.networking.packets.packet import Packet
 from src.networking.types import String, VarIntPrefixedByteArray, VarInt, Integer, VarIntArray, \
-    Long, Byte, Double, Float
+    Long, Byte, Double, Float, Boolean, UUID
 
 """
  Note: not using an OrderedDict for `definition` will break
@@ -89,3 +89,50 @@ class PlayerPositionAndLook(Packet):
         "Flags": Byte,
         "TeleportID": VarInt
     }
+
+
+class PlayerListItem(Packet):
+    id = 0x2E
+    definition = {
+        "Action": None,
+        "NumberOfPlayers": None,
+        "Players": None
+    }
+
+    def read_fields(self, packet_buffer):
+        self.Action = VarInt.read(packet_buffer)
+        self.NumberOfPlayers = VarInt.read(packet_buffer)
+        self.Players = []
+
+        for _ in range(0, self.NumberOfPlayers):
+            uuid = UUID.read(packet_buffer)
+            player = [uuid]
+            if self.Action == 0: # Add Player
+                name = String.read(packet_buffer)
+                number_of_properties = VarInt.read(packet_buffer)
+                properties = []
+                for _ in range(0, number_of_properties):
+                    name = String.read(packet_buffer)
+                    value = String.read(packet_buffer)
+                    signature = None
+                    if Boolean.read(packet_buffer): # has signature
+                        signature = String.read(packet_buffer)
+                    properties.append((name, value, signature))
+
+                gamemode = VarInt.read(packet_buffer)
+                ping = VarInt.read(packet_buffer)
+
+                display_name = None
+                if Boolean.read(packet_buffer): # has display name
+                    display_name = String.read(packet_buffer)
+
+                player.append((name, properties, gamemode, ping, display_name))
+            elif self.Action == 1: # Update Gamemode
+                player.append(VarInt.read(packet_buffer))
+            elif self.Action == 2: # Update Latency
+                player.append(VarInt.read(packet_buffer))
+            elif self.Action == 3: # Update Display Name
+                has_display_name = Boolean.read(packet_buffer)
+                if has_display_name:
+                    player.append(String.read(packet_buffer))
+            self.Players.append(player)

@@ -5,7 +5,7 @@ from cryptography.hazmat.primitives.asymmetric.padding import PKCS1v15
 from cryptography.hazmat.primitives.serialization import load_der_public_key
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 
-from threading import RLock
+from threading import Lock
 
 
 def generate_shared_secret():
@@ -68,7 +68,7 @@ class EncryptedFileObjectWrapper(object):
     def __init__(self, file_object, decryptor):
         self.actual_file_object = file_object
         self.decryptor = decryptor
-        self.lock = RLock()
+        self.lock = Lock()
 
     def read(self, length):
         with self.lock:
@@ -86,7 +86,7 @@ class EncryptedSocketWrapper(object):
         self.actual_socket = socket
         self.encryptor = encryptor
         self.decryptor = decryptor
-        self.lock = RLock()
+        self.lock = Lock()
 
     def recv(self, length):
         with self.lock:

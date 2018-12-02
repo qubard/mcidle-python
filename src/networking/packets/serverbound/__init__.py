@@ -1,6 +1,6 @@
 from src.networking.packets.packet import Packet
 from src.networking.types import String, Long, UnsignedShort, VarInt, VarIntPrefixedByteArray, \
-    Double, Float, Boolean
+    Double, Float, Boolean, UnsignedByte, Short, Byte
 
 """
  Note: not using an OrderedDict for `definition` will break
@@ -73,4 +73,16 @@ class PlayerPositionAndLook(Packet):
         "Yaw": Float,
         "Pitch": Float,
         "OnGround": Boolean
+    }
+
+
+class ClickWindow(Packet):
+    id = 0x07
+    definition = {
+        "WindowID": UnsignedByte,
+        "Slot": Short,
+        "Button": Byte,
+        "ActionNumber": Short,
+        "Mode": VarInt,
+        "ClickedSlot": VarInt
     }

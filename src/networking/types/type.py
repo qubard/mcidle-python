@@ -195,7 +195,7 @@ class VarIntArray(Type):
     def read(stream):
         count = VarInt.read(stream)
         arr = []
-        for i in range(0, count):
+        for _ in range(0, count):
             arr.append(VarInt.read(stream))
         return arr
 
