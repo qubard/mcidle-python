@@ -2,7 +2,7 @@ from src.networking.packet_handler import PacketHandler
 from src.networking.packets.serverbound import Handshake, LoginStart, EncryptionResponse, ClientStatus, \
     PlayerPositionAndLook, TeleportConfirm
 from src.networking.packets.clientbound import EncryptionRequest, SetCompression, SpawnEntity, ChunkData, \
-    PlayerListItem
+    PlayerListItem, TimeUpdate
 from src.networking.packets.clientbound import PlayerPositionAndLook as PlayerPositionAndLookClientbound
 
 from cryptography.hazmat.backends import default_backend
@@ -17,7 +17,6 @@ class LoginHandler(PacketHandler):
     def __init__(self, connection, mc_connection):
         super().__init__(connection)
         self.mc_connection = mc_connection
-        self.teleport_id = 1
 
     def handle_position_packet(self, packet):
         if packet.id != PlayerPositionAndLook.id:
@@ -45,13 +44,16 @@ class LoginHandler(PacketHandler):
 
                 pos_packet = PlayerPositionAndLookClientbound( \
                     X=last_packet.X, Y=last_packet.Y, Z=last_packet.Z, \
-                    Yaw=self.mc_connection.last_yaw, Pitch=self.mc_connection.last_pitch, Flags=0, TeleportID=self.teleport_id)
-                self.teleport_id += 1
+                    Yaw=self.mc_connection.last_yaw, Pitch=self.mc_connection.last_pitch, Flags=0, TeleportID=self.connection.teleport_id)
+                self.connection.teleport_id += 1
                 self.connection.send_packet(pos_packet)
             else:
                 self.connection.send_packet_buffer(
                     self.mc_connection.packet_log[PlayerPositionAndLookClientbound.id] \
                         .compressed_buffer)  # Send the last packet that we got
+
+        if TimeUpdate.id in self.mc_connection.packet_log:
+            self.connection.send_packet_buffer(self.mc_connection.packet_log[TimeUpdate.id].compressed_buffer)
 
         # Send the player list items (to see other players)
         if PlayerListItem.id in self.mc_connection.packet_log:
@@ -59,17 +61,17 @@ class LoginHandler(PacketHandler):
             for packet in player_lists:
                 self.connection.send_packet_buffer(packet.compressed_buffer)
 
-        # Send the player all the currently loaded entities
-        if SpawnEntity.id in self.mc_connection.packet_log:
-            entity_dict = self.mc_connection.packet_log[SpawnEntity.id]
-            for packet in entity_dict.values():
-                self.connection.send_packet_buffer(packet.compressed_buffer)
-
         if ChunkData.id in self.mc_connection.packet_log:
             # Send the player all the currently loaded chunks
             chunk_dict = self.mc_connection.packet_log[ChunkData.id]
             print("Sending %s chunks" % len(chunk_dict.values()), flush=True)
             for packet in chunk_dict.values():
+                self.connection.send_packet_buffer(packet.compressed_buffer)
+
+        # Send the player all the currently loaded entities
+        if SpawnEntity.id in self.mc_connection.packet_log:
+            entity_dict = self.mc_connection.packet_log[SpawnEntity.id]
+            for packet in entity_dict.values():
                 self.connection.send_packet_buffer(packet.compressed_buffer)
 
         # Player sends ClientStatus, this is important for respawning if died
@@ -117,6 +119,7 @@ class LoginHandler(PacketHandler):
 
                     if ready_to_read:
                         packet = self.read_packet()
+
                         if packet.id != TeleportConfirm.id: # Sending these will crash us
                             self.handle_position_packet(packet)
                             self.mc_connection.send_packet_buffer(packet.compressed_buffer)

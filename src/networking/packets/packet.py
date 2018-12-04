@@ -84,12 +84,13 @@ class Packet:
         data = packet_buffer.bytes
 
         if is_compressed:
+            actual_data_length = data_length
             data = compress(data)
 
         # Clear the last packet buffer to be overwritten
         packet_buffer.clear()
 
-        packet_length = VarInt.write(actual_data_length, PacketBuffer()) + data_length
+        packet_length = VarInt.write(actual_data_length, PacketBuffer()) + len(data)
 
         VarInt.write(packet_length, self.packet_buffer_)
         VarInt.write(actual_data_length, self.packet_buffer_)

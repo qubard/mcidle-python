@@ -87,12 +87,19 @@ class MinecraftConnection(Connection):
 
         """ JoinGame, ServerDifficulty, SpawnPosition, PlayerAbilities, Respawn """
         self.join_ids = [0x23, 0x0D, 0x46, 0x2C, 0x35]
-        self.packet_log = {} # Keep track of all the packets for re-sending upon connection
+        self.packet_log_ = {} # Keep track of all the packets for re-sending upon connection
+        self.packet_log_lock = threading.RLock()
 
     """ Connect to the socket and start a connection thread """
     def connect(self):
         self.socket.connect(self.address)
         print("Connected", flush=True)
+
+    @property
+    def packet_log(self):
+        with self.packet_log_lock:
+            return self.packet_log_
+
 
     def initialize_connection(self):
         self.connect()
@@ -113,6 +120,7 @@ class MinecraftServer(Connection):
     def __init__(self, port=25565, mc_connection=None):
         super().__init__('localhost', port)
         self.packet_handler = ClientboundLoginHandler(self, mc_connection)
+        self.teleport_id = 2
 
     """ Bind to a socket and wait for a client to connect """
     def initialize_connection(self):

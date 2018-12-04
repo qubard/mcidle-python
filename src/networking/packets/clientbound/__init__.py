@@ -17,6 +17,14 @@ class EncryptionRequest(Packet):
     }
 
 
+class TimeUpdate(Packet):
+    id = 0x47
+    definition =  {
+        "WorldAge": Long,
+        "TimeOfDay": Long
+    }
+
+
 class LoginSuccess(Packet):
     id = 0x02
     definition = {
