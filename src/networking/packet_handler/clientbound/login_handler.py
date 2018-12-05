@@ -30,6 +30,12 @@ class LoginHandler(PacketHandler):
         # Replace the currently logged PlayerPositionAndLookClientbound packet
         self.mc_connection.last_pos_packet = pos_packet
 
+    def send_packet_dict(self, id):
+        if id in self.mc_connection.packet_log:
+            packet_dict = self.mc_connection.packet_log[id]
+            for packet in packet_dict.values():
+                self.connection.send_packet_buffer(packet.compressed_buffer)
+
     def join_world(self):
         # Send the player all the packets that lets them join the world
         for id_ in self.mc_connection.join_ids:
@@ -56,23 +62,13 @@ class LoginHandler(PacketHandler):
             self.connection.send_packet_buffer(self.mc_connection.packet_log[TimeUpdate.id].compressed_buffer)
 
         # Send the player list items (to see other players)
-        if PlayerListItem.id in self.mc_connection.packet_log:
-            player_lists = self.mc_connection.packet_log[PlayerListItem.id]
-            for packet in player_lists:
-                self.connection.send_packet_buffer(packet.compressed_buffer)
+        self.send_packet_dict(PlayerListItem.id)
 
-        if ChunkData.id in self.mc_connection.packet_log:
-            # Send the player all the currently loaded chunks
-            chunk_dict = self.mc_connection.packet_log[ChunkData.id]
-            print("Sending %s chunks" % len(chunk_dict.values()), flush=True)
-            for packet in chunk_dict.values():
-                self.connection.send_packet_buffer(packet.compressed_buffer)
+        # Send all loaded chunks
+        self.send_packet_dict(ChunkData.id)
 
         # Send the player all the currently loaded entities
-        if SpawnEntity.id in self.mc_connection.packet_log:
-            entity_dict = self.mc_connection.packet_log[SpawnEntity.id]
-            for packet in entity_dict.values():
-                self.connection.send_packet_buffer(packet.compressed_buffer)
+        self.send_packet_dict(SpawnEntity.id)
 
         # Player sends ClientStatus, this is important for respawning if died
         self.mc_connection.send_packet(ClientStatus(ActionID=0))

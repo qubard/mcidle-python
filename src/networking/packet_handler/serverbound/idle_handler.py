@@ -19,10 +19,24 @@ class IdleHandler(PacketHandler):
 
     def handle_player_list(self, packet):
         player_list_item = PlayerListItem().read(packet.packet_buffer)
+
         if packet.id not in self.connection.packet_log:
-            self.connection.packet_log[packet.id] = []
-        if player_list_item.Action == 0 or player_list_item.Action == 4:
-            self.connection.packet_log[packet.id].append(packet)
+            self.connection.packet_log[packet.id] = {}
+
+        add_player = 0
+        remove_player = 4
+
+        if player_list_item.Action == add_player or player_list_item.Action == remove_player:
+            for player in player_list_item.Players:
+                uuid = player[0]
+                if player_list_item.Action == add_player:
+                    if uuid not in self.connection.packet_log[packet.id]:
+                        print("Added", player, flush=True)
+                        self.connection.packet_log[packet.id][uuid] = packet
+                elif player_list_item.Action == remove_player:
+                    if uuid in self.connection.packet_log[packet.id]:
+                        print("Removed", player, flush=True)
+                        del self.connection.packet_log[packet.id][uuid]
 
     def handle_chunk_unloading(self, packet):
         unload_chunk = UnloadChunk().read(packet.packet_buffer)
@@ -38,6 +52,15 @@ class IdleHandler(PacketHandler):
             self.connection.packet_log[packet.id] = {}
         self.connection.packet_log[packet.id][(chunk_data.ChunkX, chunk_data.ChunkY)] = packet
         print("ChunkData", chunk_data.ChunkX, chunk_data.ChunkY)
+
+    def handle_spawn_entity(self, packet):
+        spawn_entity = SpawnEntity().read(packet.packet_buffer)
+        if SpawnEntity.id not in self.connection.packet_log:
+            self.connection.packet_log[SpawnEntity.id] = {}
+        if spawn_entity.EntityID not in self.connection.packet_log[SpawnEntity.id]:
+            self.connection.packet_log[SpawnEntity.id][spawn_entity.EntityID] = packet
+        print("Added entity ID: %s" % spawn_entity.EntityID, self.connection.packet_log[SpawnEntity.id].keys(),
+              flush=True)
 
     """ Idling occurs when we've disconnected our client or have yet to connect """
     def handle(self):
@@ -56,11 +79,7 @@ class IdleHandler(PacketHandler):
                     elif packet.id == UnloadChunk.id: # UnloadChunk
                         self.handle_chunk_unloading(packet)
                     elif packet.id in SpawnEntity.ids:
-                        spawn_entity = SpawnEntity().read(packet.packet_buffer)
-                        if SpawnEntity.id not in self.connection.packet_log:
-                            self.connection.packet_log[SpawnEntity.id] = {}
-                        self.connection.packet_log[SpawnEntity.id][spawn_entity.EntityID] = packet
-                        print("Added entity ID: %s" % spawn_entity.EntityID, self.connection.packet_log[SpawnEntity.id].keys(), flush=True)
+                        self.handle_spawn_entity(packet)
                     elif packet.id == DestroyEntities.id:
                         self.handle_destroyed_entities(packet)
                     elif packet.id == KeepAlive.id and not self.connection.client_connection: # KeepAlive Clientbound
