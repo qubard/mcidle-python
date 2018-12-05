@@ -72,6 +72,7 @@ class MinecraftConnection(Connection):
         self.server = None
         self.server_port = server_port
 
+        self.held_item_slot = 0
         self.last_pos_packet = None
         self.last_yaw = 0
         self.last_pitch = 0
@@ -99,7 +100,6 @@ class MinecraftConnection(Connection):
     def packet_log(self):
         with self.packet_log_lock:
             return self.packet_log_
-
 
     def initialize_connection(self):
         self.connect()

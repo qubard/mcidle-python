@@ -1,7 +1,8 @@
 from src.networking.packet_handler import PacketHandler
 from src.networking.packets.serverbound import KeepAlive as KeepAliveServerbound, TeleportConfirm
 from src.networking.packets.clientbound import ChunkData, UnloadChunk, SpawnEntity, Disconnect, \
-    DestroyEntities, KeepAlive, ChatMessage, PlayerListItem, PlayerPositionAndLook, TimeUpdate
+    DestroyEntities, KeepAlive, ChatMessage, PlayerListItem, PlayerPositionAndLook, TimeUpdate, \
+    HeldItemChange
 
 import select
 
@@ -102,7 +103,8 @@ class IdleHandler(PacketHandler):
                         print(Disconnect.read(packet.packet_buffer), flush=True)
                     elif packet.id == TimeUpdate.id:
                         self.connection.packet_log[packet.id] = packet
-
+                    elif packet.id == HeldItemChange.id:
+                        self.connection.held_item_slot = HeldItemChange().read(packet.packet_buffer).Slot
                     # Forward the packets if a client is connected
                     if self.connection.client_connection and self.connection.client_connection.connected:
                         try:

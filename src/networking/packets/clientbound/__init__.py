@@ -25,6 +25,13 @@ class TimeUpdate(Packet):
     }
 
 
+class HeldItemChange(Packet):
+    id = 0x3A
+    definition = {
+        "Slot": Byte
+    }
+
+
 class LoginSuccess(Packet):
     id = 0x02
     definition = {

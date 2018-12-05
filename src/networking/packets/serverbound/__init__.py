@@ -32,6 +32,13 @@ class Handshake(Packet):
     }
 
 
+class HeldItemChange(Packet):
+    id = 0x1A
+    definition = {
+        "Slot": Short
+    }
+
+
 class LoginStart(Packet):
     id = 0x00
     definition = {

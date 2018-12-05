@@ -2,7 +2,7 @@ from src.networking.packet_handler import PacketHandler
 from src.networking.packets.serverbound import Handshake, LoginStart, EncryptionResponse, ClientStatus, \
     PlayerPositionAndLook, TeleportConfirm
 from src.networking.packets.clientbound import EncryptionRequest, SetCompression, SpawnEntity, ChunkData, \
-    PlayerListItem, TimeUpdate
+    PlayerListItem, TimeUpdate, HeldItemChange
 from src.networking.packets.clientbound import PlayerPositionAndLook as PlayerPositionAndLookClientbound
 
 from cryptography.hazmat.backends import default_backend
@@ -18,7 +18,13 @@ class LoginHandler(PacketHandler):
         super().__init__(connection)
         self.mc_connection = mc_connection
 
-    def handle_position_packet(self, packet):
+    def handle_held_item_change(self, packet):
+        if packet.id != HeldItemChange.id:
+            return
+
+        self.mc_connection.held_item_slot = HeldItemChange().read(packet.packet_buffer).Slot
+
+    def handle_position(self, packet):
         if packet.id != PlayerPositionAndLook.id:
             return
 
@@ -50,7 +56,8 @@ class LoginHandler(PacketHandler):
 
                 pos_packet = PlayerPositionAndLookClientbound( \
                     X=last_packet.X, Y=last_packet.Y, Z=last_packet.Z, \
-                    Yaw=self.mc_connection.last_yaw, Pitch=self.mc_connection.last_pitch, Flags=0, TeleportID=self.connection.teleport_id)
+                    Yaw=self.mc_connection.last_yaw, Pitch=self.mc_connection.last_pitch, Flags=0, \
+                    TeleportID=self.connection.teleport_id)
                 self.connection.teleport_id += 1
                 self.connection.send_packet(pos_packet)
             else:
@@ -72,6 +79,9 @@ class LoginHandler(PacketHandler):
 
         # Player sends ClientStatus, this is important for respawning if died
         self.mc_connection.send_packet(ClientStatus(ActionID=0))
+
+        # Send their last held item
+        self.connection.send_packet(HeldItemChange(Slot=self.mc_connection.held_item_slot))
 
     def handle(self):
         Handshake().read(self.read_packet().packet_buffer)
@@ -117,7 +127,8 @@ class LoginHandler(PacketHandler):
                         packet = self.read_packet()
 
                         if packet.id != TeleportConfirm.id: # Sending these will crash us
-                            self.handle_position_packet(packet)
+                            self.handle_position(packet)
+                            self.handle_held_item_change(packet)
                             self.mc_connection.send_packet_buffer(packet.compressed_buffer)
             except:
                 self.mc_connection.client_connection = None
