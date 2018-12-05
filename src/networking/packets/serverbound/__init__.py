@@ -83,6 +83,13 @@ class PlayerPositionAndLook(Packet):
     }
 
 
+class Player(Packet):
+    id = 0x0C
+    definition = {
+        "OnGround": Boolean
+    }
+
+
 class ClickWindow(Packet):
     id = 0x07
     definition = {
