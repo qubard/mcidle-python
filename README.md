@@ -12,3 +12,4 @@ Goal is to port the golang version to python
 - handle gamemode changes and inventory
 - test out other versions (version support)
 - README w/ usage
+- crafting bug on some servers (causes disconnection/packet lag?)
