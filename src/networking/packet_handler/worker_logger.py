@@ -1,7 +1,6 @@
 from src.networking.packets.serverbound import KeepAlive as KeepAliveServerbound, TeleportConfirm
 from src.networking.packets.clientbound import ChunkData, UnloadChunk, SpawnEntity, Disconnect, \
-    DestroyEntities, KeepAlive, ChatMessage, PlayerListItem, PlayerPositionAndLook, TimeUpdate, \
-    HeldItemChange
+    DestroyEntities, KeepAlive, ChatMessage, PlayerPositionAndLook, TimeUpdate, HeldItemChange
 
 import threading
 
@@ -19,23 +18,6 @@ class WorkerLogger(threading.Thread):
                       flush=True)
                 del self.parent.log[SpawnEntity.id][entity_id]  # Delete the entity
 
-    def player_list(self, packet):
-        player_list_item = PlayerListItem().read(packet.packet_buffer)
-
-        add_player = 0
-        remove_player = 4
-
-        if player_list_item.Action == add_player or player_list_item.Action == remove_player:
-            for player in player_list_item.Players:
-                uuid = player[0]
-                if player_list_item.Action == add_player:
-                    print("Added", player, flush=True)
-                    self.parent.log[packet.id][uuid] = packet
-                elif player_list_item.Action == remove_player:
-                    print("Removed", player, flush=True)
-                    if uuid in self.parent.log[packet.id]:
-                        del self.parent.log[packet.id][uuid]
-
     def chunk_unload(self, packet):
         unload_chunk = UnloadChunk().read(packet.packet_buffer)
         chunk_key = (unload_chunk.ChunkX, unload_chunk.ChunkY)
@@ -45,7 +27,9 @@ class WorkerLogger(threading.Thread):
 
     def chunk_load(self, packet):
         chunk_data = ChunkData().read(packet.packet_buffer)
-        self.parent.log[packet.id][(chunk_data.ChunkX, chunk_data.ChunkY)] = packet
+        chunk_key = (chunk_data.ChunkX, chunk_data.ChunkY)
+        if chunk_key not in self.parent.log[packet.id]:
+            self.parent.log[packet.id][chunk_key] = packet
         print("ChunkData", chunk_data.ChunkX, chunk_data.ChunkY)
 
     def spawn_entity(self, packet):
@@ -70,8 +54,6 @@ class WorkerLogger(threading.Thread):
             keep_alive = KeepAlive().read(packet.packet_buffer)
             print("Responded to KeepAlive", keep_alive, flush=True)
             self.parent.connection.send_packet(KeepAliveServerbound(KeepAliveID=keep_alive.KeepAliveID))
-        elif packet.id == PlayerListItem.id:  # PlayerListItem
-            self.player_list(packet)
         elif packet.id == ChatMessage.id:
             chat_message = ChatMessage().read(packet.packet_buffer)
             print(chat_message, flush=True)
@@ -93,4 +75,5 @@ class WorkerLogger(threading.Thread):
     def run(self):
         while True:
             if not self.parent.queue.empty():
-                self.process_packet(self.parent.queue.get())
+                packet = self.parent.queue.get()
+                self.process_packet(packet)

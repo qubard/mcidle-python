@@ -2,7 +2,7 @@ from src.networking.packet_handler import PacketHandler
 from src.networking.packets.serverbound import Handshake, LoginStart, EncryptionResponse, ClientStatus, \
     PlayerPositionAndLook, TeleportConfirm
 from src.networking.packets.clientbound import EncryptionRequest, SetCompression, SpawnEntity, ChunkData, \
-    PlayerListItem, TimeUpdate, HeldItemChange
+    TimeUpdate, HeldItemChange, PlayerListItem
 from src.networking.packets.clientbound import PlayerPositionAndLook as PlayerPositionAndLookClientbound
 
 from cryptography.hazmat.backends import default_backend
@@ -36,9 +36,9 @@ class LoginHandler(PacketHandler):
         # Replace the currently logged PlayerPositionAndLookClientbound packet
         self.mc_connection.last_pos_packet = pos_packet
 
-    def send_packet_dict(self, id):
-        if id in self.mc_connection.packet_logger.log:
-            packet_dict = self.mc_connection.packet_logger.log[id]
+    def send_packet_dict(self, id_):
+        if id_ in self.mc_connection.packet_logger.log:
+            packet_dict = self.mc_connection.packet_logger.log[id_]
             for packet in packet_dict.values():
                 self.connection.send_packet_buffer(packet.compressed_buffer)
 
