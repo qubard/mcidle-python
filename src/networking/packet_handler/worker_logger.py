@@ -1,0 +1,96 @@
+from src.networking.packets.serverbound import KeepAlive as KeepAliveServerbound, TeleportConfirm
+from src.networking.packets.clientbound import ChunkData, UnloadChunk, SpawnEntity, Disconnect, \
+    DestroyEntities, KeepAlive, ChatMessage, PlayerListItem, PlayerPositionAndLook, TimeUpdate, \
+    HeldItemChange
+
+import threading
+
+
+class WorkerLogger(threading.Thread):
+    def __init__(self, parent):
+        threading.Thread.__init__(self)
+        self.parent = parent
+
+    def destroy_entities(self, packet):
+        destroy_entities = DestroyEntities().read(packet.packet_buffer)
+        for entity_id in destroy_entities.Entities:
+            if entity_id in self.parent.log[SpawnEntity.id]:
+                print("Removed entity ID: %s" % entity_id, self.parent.log[SpawnEntity.id].keys(),
+                      flush=True)
+                del self.parent.log[SpawnEntity.id][entity_id]  # Delete the entity
+
+    def player_list(self, packet):
+        player_list_item = PlayerListItem().read(packet.packet_buffer)
+
+        add_player = 0
+        remove_player = 4
+
+        if player_list_item.Action == add_player or player_list_item.Action == remove_player:
+            for player in player_list_item.Players:
+                uuid = player[0]
+                if player_list_item.Action == add_player:
+                    print("Added", player, flush=True)
+                    self.parent.log[packet.id][uuid] = packet
+                elif player_list_item.Action == remove_player:
+                    print("Removed", player, flush=True)
+                    if uuid in self.parent.log[packet.id]:
+                        del self.parent.log[packet.id][uuid]
+
+    def chunk_unload(self, packet):
+        unload_chunk = UnloadChunk().read(packet.packet_buffer)
+        chunk_key = (unload_chunk.ChunkX, unload_chunk.ChunkY)
+        if chunk_key in self.parent.log[ChunkData.id]:
+            del self.parent.log[ChunkData.id][chunk_key]
+            print("UnloadChunk", unload_chunk.ChunkX, unload_chunk.ChunkY)
+
+    def chunk_load(self, packet):
+        chunk_data = ChunkData().read(packet.packet_buffer)
+        self.parent.log[packet.id][(chunk_data.ChunkX, chunk_data.ChunkY)] = packet
+        print("ChunkData", chunk_data.ChunkX, chunk_data.ChunkY)
+
+    def spawn_entity(self, packet):
+        spawn_entity = SpawnEntity().read(packet.packet_buffer)
+        if spawn_entity.EntityID not in self.parent.log[SpawnEntity.id]:
+            self.parent.log[SpawnEntity.id][spawn_entity.EntityID] = packet
+            print("Added entity ID: %s" % spawn_entity.EntityID, self.parent.log[SpawnEntity.id].keys(),
+              flush=True)
+
+    def process_packet(self, packet):
+        if packet.id in self.parent.connection.join_ids:
+            self.parent.log[packet.id] = packet
+        elif packet.id == ChunkData.id:  # ChunkData
+            self.chunk_load(packet)
+        elif packet.id == UnloadChunk.id:  # UnloadChunk
+            self.chunk_unload(packet)
+        elif packet.id in SpawnEntity.ids:
+            self.spawn_entity(packet)
+        elif packet.id == DestroyEntities.id:
+            self.destroy_entities(packet)
+        elif packet.id == KeepAlive.id and not self.parent.connection.client_connection:  # KeepAlive Clientbound
+            keep_alive = KeepAlive().read(packet.packet_buffer)
+            print("Responded to KeepAlive", keep_alive, flush=True)
+            self.parent.connection.send_packet(KeepAliveServerbound(KeepAliveID=keep_alive.KeepAliveID))
+        elif packet.id == PlayerListItem.id:  # PlayerListItem
+            self.player_list(packet)
+        elif packet.id == ChatMessage.id:
+            chat_message = ChatMessage().read(packet.packet_buffer)
+            print(chat_message, flush=True)
+        elif packet.id == PlayerPositionAndLook.id:
+            pos_packet = PlayerPositionAndLook().read(packet.packet_buffer)
+
+            # Send back a teleport confirm
+            self.parent.connection.send_packet(TeleportConfirm(TeleportID=pos_packet.TeleportID))
+
+            # Log the packet
+            self.parent.log[packet.id] = packet
+        elif packet.id == Disconnect.id:
+            print(Disconnect.read(packet.packet_buffer), flush=True)
+        elif packet.id == TimeUpdate.id:
+            self.parent.log[packet.id] = packet
+        elif packet.id == HeldItemChange.id:
+            self.parent.connection.held_item_slot = HeldItemChange().read(packet.packet_buffer).Slot
+
+    def run(self):
+        while True:
+            if not self.parent.queue.empty():
+                self.process_packet(self.parent.queue.get())

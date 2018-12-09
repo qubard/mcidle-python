@@ -37,20 +37,20 @@ class LoginHandler(PacketHandler):
         self.mc_connection.last_pos_packet = pos_packet
 
     def send_packet_dict(self, id):
-        if id in self.mc_connection.packet_log:
-            packet_dict = self.mc_connection.packet_log[id]
+        if id in self.mc_connection.packet_logger.log:
+            packet_dict = self.mc_connection.packet_logger.log[id]
             for packet in packet_dict.values():
                 self.connection.send_packet_buffer(packet.compressed_buffer)
 
     def join_world(self):
         # Send the player all the packets that lets them join the world
         for id_ in self.mc_connection.join_ids:
-            if id_ in self.mc_connection.packet_log:
-                packet = self.mc_connection.packet_log[id_]
+            if id_ in self.mc_connection.packet_logger.log:
+                packet = self.mc_connection.packet_logger.log[id_]
                 self.connection.send_packet_buffer(packet.compressed_buffer)
 
         # Send them their last position/look if it exists
-        if PlayerPositionAndLookClientbound.id in self.mc_connection.packet_log:
+        if PlayerPositionAndLookClientbound.id in self.mc_connection.packet_logger.log:
             if self.mc_connection and self.mc_connection.last_pos_packet:
                 last_packet = self.mc_connection.last_pos_packet
 
@@ -62,11 +62,11 @@ class LoginHandler(PacketHandler):
                 self.connection.send_packet(pos_packet)
             else:
                 self.connection.send_packet_buffer(
-                    self.mc_connection.packet_log[PlayerPositionAndLookClientbound.id] \
+                    self.mc_connection.packet_logger.log[PlayerPositionAndLookClientbound.id] \
                         .compressed_buffer)  # Send the last packet that we got
 
-        if TimeUpdate.id in self.mc_connection.packet_log:
-            self.connection.send_packet_buffer(self.mc_connection.packet_log[TimeUpdate.id].compressed_buffer)
+        if TimeUpdate.id in self.mc_connection.packet_logger.log:
+            self.connection.send_packet_buffer(self.mc_connection.packet_logger.log[TimeUpdate.id].compressed_buffer)
 
         # Send the player list items (to see other players)
         self.send_packet_dict(PlayerListItem.id)

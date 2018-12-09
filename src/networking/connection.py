@@ -6,7 +6,7 @@ from src.networking.encryption import *
 from src.networking.packet_handler.serverbound import LoginHandler as ServerboundLoginHandler
 from src.networking.packet_handler.clientbound import LoginHandler as ClientboundLoginHandler
 
-from multiprocessing import Manager
+from src.networking.packet_handler import PacketLogger
 
 
 class Connection(threading.Thread):
@@ -90,8 +90,8 @@ class MinecraftConnection(Connection):
 
         """ JoinGame, ServerDifficulty, SpawnPosition, PlayerAbilities, Respawn """
         self.join_ids = [0x23, 0x0D, 0x46, 0x2C, 0x35]
-        self.manager = Manager()
-        self.packet_log = self.manager.dict()
+        self.packet_logger = PacketLogger(self) # Logs incoming packets in another thread
+        self.packet_logger.start_threads()
 
     """ Connect to the socket and start a connection thread """
     def connect(self):
