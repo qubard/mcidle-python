@@ -22,7 +22,7 @@ class IdleHandler(PacketHandler):
         player_list_item = PlayerListItem().read(packet.packet_buffer)
 
         if packet.id not in self.connection.packet_log:
-            self.connection.packet_log[packet.id] = {}
+            self.connection.packet_log[packet.id] = self.connection.manager.dict()
 
         add_player = 0
         remove_player = 4
@@ -50,14 +50,14 @@ class IdleHandler(PacketHandler):
     def handle_chunk_loading(self, packet):
         chunk_data = ChunkData().read(packet.packet_buffer)
         if packet.id not in self.connection.packet_log:
-            self.connection.packet_log[packet.id] = {}
+            self.connection.packet_log[packet.id] = self.connection.manager.dict()
         self.connection.packet_log[packet.id][(chunk_data.ChunkX, chunk_data.ChunkY)] = packet
         print("ChunkData", chunk_data.ChunkX, chunk_data.ChunkY)
 
     def handle_spawn_entity(self, packet):
         spawn_entity = SpawnEntity().read(packet.packet_buffer)
         if SpawnEntity.id not in self.connection.packet_log:
-            self.connection.packet_log[SpawnEntity.id] = {}
+            self.connection.packet_log[SpawnEntity.id] = self.connection.manager.dict()
         if spawn_entity.EntityID not in self.connection.packet_log[SpawnEntity.id]:
             self.connection.packet_log[SpawnEntity.id][spawn_entity.EntityID] = packet
         print("Added entity ID: %s" % spawn_entity.EntityID, self.connection.packet_log[SpawnEntity.id].keys(),
