@@ -6,7 +6,7 @@ from multiprocessing import Manager, Queue
 
 class PacketLogger:
 
-    def __init__(self, connection, thread_count=8):
+    def __init__(self, connection, thread_count=16):
         self.connection = connection
         self.manager = Manager()
         self.queue = Queue()
@@ -20,7 +20,6 @@ class PacketLogger:
         self.log[ChunkData.id] = self.manager.dict()
         self.log[UnloadChunk.id] = self.manager.dict()
         self.log[PlayerListItem.id] = self.manager.dict()
-        self.log[ChunkData.id] = self.manager.dict()
         self.log[SpawnEntity.id] = self.manager.dict()
 
     def start_threads(self):

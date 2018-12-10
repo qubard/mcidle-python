@@ -65,8 +65,6 @@ class WorkerLogger(threading.Thread):
 
             # Log the packet
             self.parent.log[packet.id] = packet
-        elif packet.id == Disconnect.id:
-            print(Disconnect.read(packet.packet_buffer), flush=True)
         elif packet.id == TimeUpdate.id:
             self.parent.log[packet.id] = packet
         elif packet.id == HeldItemChange.id:
