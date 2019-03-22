@@ -10,6 +10,7 @@ SESSION_SERVER = "https://sessionserver.mojang.com/session/minecraft"
 # Need this content type, or authserver will complain
 CONTENT_TYPE = "application/json"
 HEADERS = {"content-type": CONTENT_TYPE}
+CREDENTIALS_FILENAME = './credentials.json'
 
 
 class Auth:
@@ -47,6 +48,8 @@ class Auth:
         self.client_token = json_resp["clientToken"]
         self.profile.id_ = json_resp["selectedProfile"]["id"]
         self.profile.name = json_resp["selectedProfile"]["name"]
+        self.username = self.profile.name
+        return self
 
     def __str__(self):
         return "%s %s %s" % (self.username, self.access_token, self.client_token)
@@ -70,6 +73,22 @@ class Auth:
             return False
 
         return True
+
+    def save_to_disk(credentials):
+        with open(CREDENTIALS_FILENAME, 'w') as outfile:
+            json.dump(credentials, outfile)
+
+    def read_from_disk():
+        with open(CREDENTIALS_FILENAME, 'r') as infile:
+            return json.load(infile)
+
+    def has_credentials():
+        import os
+        return os.path.isfile(CREDENTIALS_FILENAME)
+
+    def delete_credentials():
+        import os
+        os.remove(CREDENTIALS_FILENAME)
 
     def authenticate(self, username, password):
         """
@@ -109,7 +128,7 @@ class Auth:
         self.profile.id_ = json_resp["selectedProfile"]["id"]
         self.profile.name = json_resp["selectedProfile"]["name"]
 
-        return True
+        return json_resp
 
     def refresh(self):
         """
@@ -171,6 +190,8 @@ class Auth:
         # http://wiki.vg/Authentication#Response_3
         if res.status_code == 204:
             return True
+
+        return False
 
     @staticmethod
     def sign_out(username, password):
