@@ -55,3 +55,5 @@ optional arguments:
 - handle gamemode changes and inventory
 - test out other versions (version support)
 - TravisCLI
+- bugfixes
+- eventual cpp version
