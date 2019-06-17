@@ -26,7 +26,7 @@ If you keep on logging in too fast (re-updating credentials) you might get an "i
 
 # Example Usage
 
-Run `python run.py username=example@example.com --password=pw123 --ip=2b2t.org` to start a connection to `2b2t.org:25565` and start up mcidle on `localhost:1337`.
+Run `python run.py --username=example@example.com --password=pw123 --ip=2b2t.org` to start a connection to `2b2t.org:25565` and start up mcidle on `localhost:1337`.
 
 Connect to `localhost:1337` to be proxied through to the destination server `2b2t.org`.
 
