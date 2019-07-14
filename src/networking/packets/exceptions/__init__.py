@@ -1,0 +1,2 @@
+class InvalidPacketID(Exception):
+    pass

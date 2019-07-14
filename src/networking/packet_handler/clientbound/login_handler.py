@@ -12,7 +12,6 @@ from cryptography.hazmat.primitives.asymmetric.padding import PKCS1v15
 
 import select
 
-
 class LoginHandler(PacketHandler):
     def __init__(self, connection, mc_connection):
         super().__init__(connection)
@@ -72,7 +71,9 @@ class LoginHandler(PacketHandler):
         self.send_packet_dict(PlayerListItem.id)
 
         # Send all loaded chunks
+        print("Sending chunks")
         self.send_packet_dict(ChunkData.id)
+        print("Done sending chunks")
 
         # Send the player all the currently loaded entities
         self.send_packet_dict(SpawnEntity.id)
@@ -93,7 +94,7 @@ class LoginHandler(PacketHandler):
             Handshake().read(self.read_packet().packet_buffer)
             LoginStart().read(self.read_packet().packet_buffer)
 
-            # Generate a (pubkey, privkey) pair
+            # Generate a dummy (pubkey, privkey) pair
             privkey = rsa.generate_private_key(public_exponent=65537, key_size=2048, backend=default_backend())
             pubkey = privkey.public_key().public_bytes(encoding=serialization.Encoding.DER, format=serialization.PublicFormat.SubjectPublicKeyInfo)
 
@@ -122,11 +123,12 @@ class LoginHandler(PacketHandler):
 
             # Let the real connection know about our client
             self.mc_connection.client_connection = self.connection
-        except Exception as e: # Invalid Session
+
+        except: # Invalid Session
             self.restart()
             return
 
-        timeout = 0.05 # Always 50ms
+        timeout = 0.0001 # Always 50ms
         while self.connection.running:
             try:
                 if self.connection.connected:

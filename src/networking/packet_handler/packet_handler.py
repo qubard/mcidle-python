@@ -20,7 +20,8 @@ class PacketHandler:
         id_buffer = PacketBuffer()
 
         # Decompress if needed
-        if self.connection.compression_threshold:
+
+        if self.connection.compression_threshold is not None:
             tmp_buf = PacketBuffer()
             tmp_buf.write(data)
             tmp_buf.reset_cursor() # Need to reset to read off the compression byte(s)

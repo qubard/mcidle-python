@@ -50,7 +50,7 @@ class WorkerLogger(threading.Thread):
             self.spawn_entity(packet)
         elif packet.id == DestroyEntities.id:
             self.destroy_entities(packet)
-        elif packet.id == KeepAlive.id and not self.parent.connection.client_connection:  # KeepAlive Clientbound
+        elif packet.id == KeepAlive.id and not self.parent.connection.client_connection: # KeepAlive Clientbound
             keep_alive = KeepAlive().read(packet.packet_buffer)
             print("Responded to KeepAlive", keep_alive, flush=True)
             self.parent.connection.send_packet(KeepAliveServerbound(KeepAliveID=keep_alive.KeepAliveID))

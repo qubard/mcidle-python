@@ -17,7 +17,7 @@ args = parser.parse_args()
 def update_credentials(username, password):
     if not Auth.has_credentials():
         if username is None or username is None:
-            raise ValueError("Please provide both your username and password!")
+            raise ValueError("Please provide both your username and password.")
 
         auth = Auth()
         Auth.save_to_disk(auth.authenticate(username=username, password=password))
@@ -38,7 +38,7 @@ def init():
     if args.ip is None:
         raise RuntimeError("Please specify an ip address!")
 
-    conn = MinecraftConnection(ip=args.ip, port=args.port, server_port=args.dport, protocol=args.protocol, username="leddit", profile=credentials)
+    conn = MinecraftConnection(ip=args.ip, port=args.port, server_port=args.dport, protocol=args.protocol, username=credentials['selectedProfile']['name'], profile=credentials)
     conn.start()
 
 if __name__ == '__main__':

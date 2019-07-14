@@ -24,7 +24,7 @@ class IdleHandler(PacketHandler):
 
     """ Idling occurs when we've disconnected our client or have yet to connect """
     def handle(self):
-        timeout = 0.05 # Always 50ms
+        timeout = 0.00001 # Always 50ms
         while self.connection.running:
             try:
                 ready_to_read = select.select([self.connection.stream], [], [], timeout)[0]
@@ -37,14 +37,18 @@ class IdleHandler(PacketHandler):
                     else:
                         self.player_list(packet)
 
+                    # Bottleneck around here, we relay packets WAY too slowly apparently
+                    # We can try making packet reading multithreaded but essentially send_packet_buffer
+                    # takes too long and it'd be nice to chunk as many packets as we could in 50ms to the player
+                    # in one buffer
+
                     # Forward the packets if a client is connected
                     if self.connection.client_connection and self.connection.client_connection.connected:
                         try:
                             self.connection.client_connection.send_packet_buffer(packet.compressed_buffer)
                         except ConnectionAbortedError:
-                            print("Something went wrong", flush=True)
-                            pass
-            except:
+                            print("Client disconnected", flush=True)
+            except EOFError:
                 print("Disconnected from server", flush=True)
                 self.connection.running = False
                 if self.connection.client_connection:

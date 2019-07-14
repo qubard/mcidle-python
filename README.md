@@ -3,9 +3,19 @@ An idling cli for minecraft which works by proxying your connection to a minecra
 
 It is particularly useful for servers which punish you for disconnecting (e.g `2b2t.org` which has queues)
 
-Currently been tested to work properly on `1.12.2`.
-
 I recommend using two accounts: one to login with via mcidle, and one to connect to mcidle with locally to avoid invalidating your login sessions (see notes).
+
+Feel free to submit an issue if something doesn't work properly.
+
+# Supported Versions
+
+If your game/server version is not listed below then `mcidle` will not function properly.
+
+| Version        | Protocol     |
+|:-------------:|:-------------:|
+| 1.12.2        | 340           |
+
+Make sure you connect with the exact game version that matches the mcidle server and the real-server.
 
 # Setup
 
@@ -26,14 +36,14 @@ If you keep on logging in too fast (re-updating credentials) you might get an "i
 
 # Example Usage
 
-Run `python run.py username=example@example.com --password=pw123 --ip=2b2t.org` to start a connection to `2b2t.org:25565` and start up mcidle on `localhost:1337`.
+Run `python mcidle.py username=example@example.com --password=pw123 --ip=2b2t.org` to start a connection to `2b2t.org:25565` and start up mcidle on `localhost:1337`.
 
-Connect to `localhost:1337` to be proxied through to the destination server `2b2t.org`.
+Connect to `localhost:1337` to be proxied through to the destination server `2b2t.org`. You can change the port from `1337` by changing the `dport` flag.
 
-Run `python run.py --help` for additional instructions on how to use the command-line utility.
+Run `python mcidle.py --help` for additional instructions on how to use the command-line utility.
 
 ```
-usage: run.py [-h] [--ip IP] [--port PORT] [--protocol PROTOCOL]
+usage: mcidle.py [-h] [--ip IP] [--port PORT] [--protocol PROTOCOL]
                [--username USERNAME] [--password PASSWORD] [--dstport DSTPORT]
 
 optional arguments:
@@ -54,4 +64,6 @@ optional arguments:
 - handle `UpdateBlockEntity`
 - handle gamemode changes and inventory
 - test out other versions (version support)
-- TravisCLI
+- version number files, somehow? player shouldn't have to worry about versions messing up
+- TravisCLI integration with a test suite
+- `join_world` throttles all packets from `C->S`, fix this

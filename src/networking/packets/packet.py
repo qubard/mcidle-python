@@ -1,8 +1,9 @@
 from .packet_buffer import PacketBuffer
-from src.networking.types import VarInt
+from ..types import VarInt
 from zlib import compress
 from base64 import b64encode
 
+from .exceptions import InvalidPacketID
 
 class Packet:
     id = None
@@ -45,7 +46,9 @@ class Packet:
     """ Read from the packet buffer into the packet's fields """
     def read(self, packet_buffer):
         id_ = VarInt.read(packet_buffer)
-        assert (id_ == self.id or (self.ids and id_ in self.ids))
+
+        if not (id_ == self.id or (self.ids and id_ in self.ids)): # Invalid packet id
+            raise InvalidPacketID('Invalid packet id! Read %s instead of' % hex(id_), hex(self.id), self.ids)
 
         self.read_fields(packet_buffer)
 

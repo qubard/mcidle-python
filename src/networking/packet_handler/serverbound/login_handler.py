@@ -2,6 +2,8 @@ from src.networking.packets.serverbound import Handshake, LoginStart, Encryption
 from src.networking.packets.clientbound import EncryptionRequest, SetCompression, LoginSuccess
 from src.networking.encryption import *
 from src.networking.packet_handler import PacketHandler
+from src.networking.packets.exceptions import InvalidPacketID
+
 from .idle_handler import IdleHandler
 
 
@@ -20,6 +22,7 @@ class LoginHandler(PacketHandler):
         self.connection.send_packet(login_start)
 
         encryption_request = EncryptionRequest().read(self.read_packet().packet_buffer)
+
         self.connection.VerifyToken = encryption_request.VerifyToken
 
         # Generate the encryption response to send over
@@ -42,12 +45,20 @@ class LoginHandler(PacketHandler):
         self.connection.enable_encryption(shared_secret)
 
         # Enable compression and set the threshold
-        set_compression = SetCompression().read(self.read_packet().packet_buffer)
-        self.connection.compression_threshold = set_compression.Threshold
+        try:
+            set_compression = SetCompression().read(self.read_packet().packet_buffer)
+            self.connection.compression_threshold = set_compression.Threshold
+            print("Set compression threshold to %s" % self.connection.compression_threshold)
+        except InvalidPacketID as e:
+            print("Skipping compression..invalid compression packet")
+            pass
 
         # Now packets are encrypted, so we can switch states after reading the decrypted login success
-        self.connection.login_success = LoginSuccess().read(self.read_packet().packet_buffer)
+        buff = self.read_packet().packet_buffer
+        print(buff)
+        self.connection.login_success = LoginSuccess().read(buff)
 
         # Switch to idling
         self.connection.packet_handler = IdleHandler(self.connection)
         self.connection.packet_handler.handle()
+
