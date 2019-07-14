@@ -6,7 +6,7 @@ from multiprocessing import Manager, Queue
 
 class PacketLogger:
 
-    def __init__(self, connection, thread_count=1):
+    def __init__(self, connection, thread_count=16):
         self.connection = connection
         self.manager = Manager()
         self.queue = Queue()

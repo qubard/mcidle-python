@@ -114,8 +114,9 @@ class LoginHandler(PacketHandler):
             self.connection.enable_encryption(shared_secret)
 
             # Enable compression and assign the threshold to the connection
-            self.connection.send_packet(SetCompression(Threshold=self.mc_connection.compression_threshold))
-            self.connection.compression_threshold = self.mc_connection.compression_threshold
+            if self.mc_connection.compression_threshold >= 0:
+                self.connection.send_packet(SetCompression(Threshold=self.mc_connection.compression_threshold))
+                self.connection.compression_threshold = self.mc_connection.compression_threshold
 
             self.connection.send_packet(self.mc_connection.login_success)
 

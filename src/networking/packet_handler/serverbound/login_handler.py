@@ -45,18 +45,21 @@ class LoginHandler(PacketHandler):
         self.connection.enable_encryption(shared_secret)
 
         # Enable compression and set the threshold
+        # We aren't sure if compression will be sent, or LoginSuccess immediately after
+        possibleCompressionPacket = self.read_packet().packet_buffer
+
         try:
-            set_compression = SetCompression().read(self.read_packet().packet_buffer)
+            set_compression = SetCompression().read(possibleCompressionPacket)
             self.connection.compression_threshold = set_compression.Threshold
             print("Set compression threshold to %s" % self.connection.compression_threshold)
+
+            self.connection.login_success = LoginSuccess().read(self.read_packet().packet_buffer)
         except InvalidPacketID as e:
             print("Skipping compression..invalid compression packet")
+            possibleCompressionPacket.reset_cursor()
+            self.connection.compression_threshold = -1 # disabled
+            self.connection.login_success = LoginSuccess().read(possibleCompressionPacket)
             pass
-
-        # Now packets are encrypted, so we can switch states after reading the decrypted login success
-        buff = self.read_packet().packet_buffer
-        print(buff)
-        self.connection.login_success = LoginSuccess().read(buff)
 
         # Switch to idling
         self.connection.packet_handler = IdleHandler(self.connection)

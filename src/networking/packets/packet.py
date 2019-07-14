@@ -73,7 +73,7 @@ class Packet:
         data_length += self.__write_fields(packet_buffer)
 
         """ Apply compression if needed """
-        if compression_threshold:
+        if compression_threshold and compression_threshold >= 0:
             return self.__write_compressed(packet_buffer, data_length, data_length >= compression_threshold)
 
         """ Uncompressed packet """

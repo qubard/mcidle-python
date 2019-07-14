@@ -28,7 +28,7 @@ When you provide arguments `username` and `password` to the CLI you do not need 
 
 ***If you re-login to Minecraft after starting `mcidle` your `credentials.json` file will be invalidated, simply re-login and don't close mcidle and you'll be able to connect.***
 
-***You'll know you have this error if you see an "Invalid Session" error after connecting to the local mcidle server.****
+***You'll know you have this error if you see an "Invalid Session" error after connecting to the local mcidle server.***
 
 Make sure that when you connect you connect with the same game client version number as the server.
 
