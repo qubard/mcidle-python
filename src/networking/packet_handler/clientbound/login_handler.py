@@ -84,63 +84,72 @@ class LoginHandler(PacketHandler):
         # Send their last held item
         self.connection.send_packet(HeldItemChange(Slot=self.mc_connection.held_item_slot))
 
-    def restart(self):
-        self.mc_connection.client_connection = None
-        self.connection.reset_socket()
-        self.mc_connection.start_server()
+    def setup(self):
+        print("Reading handshake")
+        Handshake().read(self.read_packet_from_stream().packet_buffer)
+        print("Reading login start")
+        LoginStart().read(self.read_packet_from_stream().packet_buffer)
 
+        # Generate a dummy (pubkey, privkey) pair
+        privkey = rsa.generate_private_key(public_exponent=65537, key_size=2048, backend=default_backend())
+        pubkey = privkey.public_key().public_bytes(encoding=serialization.Encoding.DER,
+                                                   format=serialization.PublicFormat.SubjectPublicKeyInfo)
+        self.connection.send_packet(
+            EncryptionRequest(ServerID='', PublicKey=pubkey, VerifyToken=self.mc_connection.VerifyToken))
+
+        # The encryption response will be encrypted with the server's public key
+        # Luckily, when this goes wrong read_packet returns None
+        _ = self.read_packet_from_stream()
+
+        if _ is None:
+            print("Invalid packet!")
+            self.connection.on_disconnect()
+            return False
+
+        encryption_response = EncryptionResponse().read(_.packet_buffer)
+
+        # Decrypt and verify the verify token
+        verify_token = privkey.decrypt(encryption_response.VerifyToken, PKCS1v15())
+        assert (verify_token == self.mc_connection.VerifyToken)
+
+        # Decrypt the shared secret
+        shared_secret = privkey.decrypt(encryption_response.SharedSecret, PKCS1v15())
+
+        # Enable encryption using the shared secret
+        self.connection.enable_encryption(shared_secret)
+
+        # Enable compression and assign the threshold to the connection
+        if self.mc_connection.compression_threshold >= 0:
+            self.connection.send_packet(SetCompression(Threshold=self.mc_connection.compression_threshold))
+            self.connection.compression_threshold = self.mc_connection.compression_threshold
+
+        self.connection.send_packet(self.mc_connection.login_success)
+
+        print("Joining world")
+        self.join_world()
+        print("Finished joining world")
+
+        # Let the real connection know about our client
+        self.mc_connection.client_connection = self.connection
+
+        return True
+
+    # We need to switch to another handler here instead
+    # This runs in the connection thread
     def handle(self):
-        try:
-            Handshake().read(self.read_packet().packet_buffer)
-            LoginStart().read(self.read_packet().packet_buffer)
-
-            # Generate a dummy (pubkey, privkey) pair
-            privkey = rsa.generate_private_key(public_exponent=65537, key_size=2048, backend=default_backend())
-            pubkey = privkey.public_key().public_bytes(encoding=serialization.Encoding.DER, format=serialization.PublicFormat.SubjectPublicKeyInfo)
-
-            self.connection.send_packet(EncryptionRequest(ServerID='', PublicKey=pubkey, VerifyToken=self.mc_connection.VerifyToken))
-
-            # The encryption response will be encrypted with the server's public key
-            encryption_response = EncryptionResponse().read(self.read_packet().packet_buffer)
-
-            # Decrypt and verify the verify token
-            verify_token = privkey.decrypt(encryption_response.VerifyToken, PKCS1v15())
-            assert(verify_token == self.mc_connection.VerifyToken)
-
-            # Decrypt the shared secret
-            shared_secret = privkey.decrypt(encryption_response.SharedSecret, PKCS1v15())
-
-            # Enable encryption using the shared secret
-            self.connection.enable_encryption(shared_secret)
-
-            # Enable compression and assign the threshold to the connection
-            if self.mc_connection.compression_threshold >= 0:
-                self.connection.send_packet(SetCompression(Threshold=self.mc_connection.compression_threshold))
-                self.connection.compression_threshold = self.mc_connection.compression_threshold
-
-            self.connection.send_packet(self.mc_connection.login_success)
-
-            self.join_world()
-
-            # Let the real connection know about our client
-            self.mc_connection.client_connection = self.connection
-
-        except: # Invalid Session
-            self.restart()
-            return
-
-        timeout = 0.0001 # Always 50ms
         while self.connection.running:
-            try:
-                if self.connection.connected:
-                    ready_to_read = select.select([self.connection.stream], [], [], timeout)[0]
+            ready_to_read = select.select([self.connection.stream], [], [], self._timeout)[0]
 
-                    if ready_to_read:
-                        packet = self.read_packet()
+            if ready_to_read:
+                packet = self.read_packet_from_stream()
 
-                        if packet.id != TeleportConfirm.id: # Sending these will crash us
-                            self.handle_position(packet)
-                            self.handle_held_item_change(packet)
-                            self.mc_connection.send_packet_buffer(packet.compressed_buffer)
-            except:
-                self.restart()
+                if packet is not None:
+                    if packet and packet.id != TeleportConfirm.id: # Sending these will crash us
+                        self.handle_position(packet)
+                        self.handle_held_item_change(packet)
+                        self.mc_connection.send_packet_buffer(packet.compressed_buffer)
+                else:
+                    print("DCed? Exiting thread")
+                    self.connection.on_disconnect()
+                    break
+

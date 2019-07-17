@@ -7,7 +7,7 @@ import select
 class IdleHandler(PacketHandler):
 
     # PlayerListItem has to be processed outside worker threads
-    def player_list(self, packet):
+    def parse_player_list(self, packet):
         player_list_item = PlayerListItem().read(packet.packet_buffer)
 
         add_player = 0
@@ -24,32 +24,39 @@ class IdleHandler(PacketHandler):
 
     """ Idling occurs when we've disconnected our client or have yet to connect """
     def handle(self):
-        timeout = 0.00001 # Always 50ms
         while self.connection.running:
             try:
-                ready_to_read = select.select([self.connection.stream], [], [], timeout)[0]
+                ready_to_read = select.select([self.connection.stream], [], [], self._timeout)[0]
 
                 if ready_to_read:
-                    packet = self.read_packet()
+                    packet = self.read_packet_from_stream()
 
-                    if packet.id != PlayerListItem.id:
-                        self.connection.packet_logger.enqueue(packet)
+                    if packet:
+                        if packet.id != PlayerListItem.id:
+                            self.connection.packet_logger.enqueue(packet)
+                        else:
+                            self.parse_player_list(packet)
+
+                        # Bottleneck around here, we relay packets WAY too slowly apparently
+                        # We can try making packet reading multithreaded but essentially send_packet_buffer
+                        # takes too long and it'd be nice to chunk as many packets as we could in 50ms to the player
+                        # in one buffer
+
+                        # We can try just recv'ing a chunk of bytes instead and pushing it to a queue to be processed
+                        # in another thread.m
+
+                        # Forward the packets if a client is connected
+                        if self.connection.client_connection:
+                            try:
+                                self.connection.client_connection.send_packet_buffer(packet.compressed_buffer)
+                            except (ConnectionAbortedError, BrokenPipeError, AttributeError):
+                                pass
                     else:
-                        self.player_list(packet)
-
-                    # Bottleneck around here, we relay packets WAY too slowly apparently
-                    # We can try making packet reading multithreaded but essentially send_packet_buffer
-                    # takes too long and it'd be nice to chunk as many packets as we could in 50ms to the player
-                    # in one buffer
-
-                    # Forward the packets if a client is connected
-                    if self.connection.client_connection and self.connection.client_connection.connected:
-                        try:
-                            self.connection.client_connection.send_packet_buffer(packet.compressed_buffer)
-                        except ConnectionAbortedError:
-                            print("Client disconnected", flush=True)
+                        raise EOFError()
             except EOFError:
-                print("Disconnected from server", flush=True)
+                print("Disconnected from server, closing", flush=True)
+
+                # Panic and exit, TODO: try reconnecting at a regular interval
                 self.connection.running = False
                 if self.connection.client_connection:
-                    self.connection.client_connection.running = False
+                    self.connection.client_connection.on_disconnect()

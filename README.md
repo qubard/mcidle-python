@@ -66,4 +66,3 @@ optional arguments:
 - test out other versions (version support)
 - version number files, somehow? player shouldn't have to worry about versions messing up
 - TravisCLI integration with a test suite
-- `join_world` throttles all packets from `C->S`, fix this

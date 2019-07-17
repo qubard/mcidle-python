@@ -5,17 +5,37 @@ from src.networking.packets.packet import Packet
 
 
 class PacketHandler:
+    _timeout = 0.05
+
     """ Generic packet handler responsible for processing incoming packets """
     def __init__(self, connection):
         self.connection = connection
 
+    """ Setup the packet handler
+        Return whether or not setup succeeded
+     """
+    def setup(self):
+        raise NotImplementedError("setup() is not implemented!")
+
+    """ Called when setup() succeeds """
+    def on_setup(self):
+        pass
+
+    """ Default behaviour is to consume packets """
+    def handle(self):
+        pass
+
+    # TODO: Maybe put this in a separate class, like PacketStreamReader that takes a connection?
     """ Read the next packet from the stream """
-    def read_packet(self):
+    def read_packet_from_stream(self):
         packet_buffer = PacketBuffer()
 
-        length = VarInt.read(self.connection.stream)
-
-        data = self.connection.stream.read(length)
+        try:
+            length = VarInt.read(self.connection.stream)
+            data = self.connection.stream.read(length)
+        except (ConnectionAbortedError, ConnectionResetError, EOFError, AttributeError) as e:
+            print("Exception", e)
+            return None
 
         id_buffer = PacketBuffer()
 
@@ -47,6 +67,8 @@ class PacketHandler:
         id_ = VarInt.read(id_buffer)
 
         # Write a compressed buffer with its length and compression indicator
+        # This packet may or may not actually be compressed
+        # Storing the compressed buffer helps w/ performance since we don't have to re-compress it
         compressed_buffer = PacketBuffer()
         VarInt.write(length, compressed_buffer)
         compressed_buffer.write(data)
@@ -55,7 +77,3 @@ class PacketHandler:
         packet_buffer.reset_cursor()
 
         return Packet(packet_buffer_=packet_buffer, compressed_buffer=compressed_buffer, id=id_)
-
-    """ Default behaviour is to consume packets """
-    def handle(self):
-        pass

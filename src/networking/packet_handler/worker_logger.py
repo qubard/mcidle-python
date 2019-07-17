@@ -4,7 +4,7 @@ from src.networking.packets.clientbound import ChunkData, UnloadChunk, SpawnEnti
 
 import threading
 
-
+# TODO: There must be a better way of doing this
 class WorkerLogger(threading.Thread):
     def __init__(self, parent):
         threading.Thread.__init__(self)

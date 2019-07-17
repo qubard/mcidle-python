@@ -11,8 +11,13 @@ class LoginHandler(PacketHandler):
     def handle(self):
         self.login()
 
+    def on_setup(self):
+        print("Switched to idling.")
+        self.connection.packet_handler = IdleHandler(self.connection)
+        self.connection.packet_handler.handle()
+
     """ Do all the authentication and logging in"""
-    def login(self):
+    def setup(self):
         # Send a handshake and login start packet
         handshake = Handshake(ProtocolVersion=self.connection.protocol, ServerAddress=self.connection.address[0], \
                               ServerPort=self.connection.address[1], NextState=2)
@@ -21,7 +26,7 @@ class LoginHandler(PacketHandler):
         self.connection.send_packet(handshake)
         self.connection.send_packet(login_start)
 
-        encryption_request = EncryptionRequest().read(self.read_packet().packet_buffer)
+        encryption_request = EncryptionRequest().read(self.read_packet_from_stream().packet_buffer)
 
         self.connection.VerifyToken = encryption_request.VerifyToken
 
@@ -46,22 +51,21 @@ class LoginHandler(PacketHandler):
 
         # Enable compression and set the threshold
         # We aren't sure if compression will be sent, or LoginSuccess immediately after
-        possibleCompressionPacket = self.read_packet().packet_buffer
+        unknown_packet = self.read_packet_from_stream().packet_buffer
 
         try:
-            set_compression = SetCompression().read(possibleCompressionPacket)
+            set_compression = SetCompression().read(unknown_packet)
             self.connection.compression_threshold = set_compression.Threshold
             print("Set compression threshold to %s" % self.connection.compression_threshold)
 
-            self.connection.login_success = LoginSuccess().read(self.read_packet().packet_buffer)
-        except InvalidPacketID as e:
+            self.connection.login_success = LoginSuccess().read(self.read_packet_from_stream().packet_buffer)
+        except InvalidPacketID:
             print("Skipping compression..invalid compression packet")
-            possibleCompressionPacket.reset_cursor()
+            unknown_packet.reset_cursor()
             self.connection.compression_threshold = -1 # disabled
-            self.connection.login_success = LoginSuccess().read(possibleCompressionPacket)
-            pass
+            self.connection.login_success = LoginSuccess().read(unknown_packet)
+            return False
 
-        # Switch to idling
-        self.connection.packet_handler = IdleHandler(self.connection)
-        self.connection.packet_handler.handle()
+        return True
+
 

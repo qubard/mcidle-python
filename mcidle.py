@@ -38,6 +38,7 @@ def init():
     if args.ip is None:
         raise RuntimeError("Please specify an ip address!")
 
+    # TODO: Wrap this in a cohesive interface that can manage connections
     conn = MinecraftConnection(ip=args.ip, port=args.port, server_port=args.dport, protocol=args.protocol, username=credentials['selectedProfile']['name'], profile=credentials)
     conn.start()
 

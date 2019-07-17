@@ -29,15 +29,15 @@ class Connection(threading.Thread):
         """ Create a read only blocking file interface (stream) for the socket """
         self.stream = self.socket.makefile('rb')
 
-    def reset_socket(self):
-        self.socket.shutdown(2)
-        self.socket.close()
-        self.socket = None
-        self.stream = None
-
-    @property
-    def connected(self):
-        return self.socket and self.stream
+    def destroy_socket(self):
+        try:
+            self.socket.close()
+            self.socket = None
+            self.stream = None
+            print("Socket shutdown and closed.")
+        except OSError:
+            print("Failed to reset socket")
+            pass
 
     def enable_encryption(self, shared_secret):
         cipher = create_AES_cipher(shared_secret)
@@ -52,6 +52,12 @@ class Connection(threading.Thread):
     def initialize_connection(self):
         pass
 
+    # We need this to stop reading packets from the dead stream
+    # which halts the wait thread
+    def on_disconnect(self):
+        self.running = False
+        self.destroy_socket()
+
     def send_packet(self, packet):
         self.socket.send(packet.write(self.compression_threshold).bytes)
 
@@ -59,10 +65,12 @@ class Connection(threading.Thread):
         self.socket.send(packet_buffer.bytes)
 
     def run(self):
-        self.running = True
         self.initialize_connection()
         if self.packet_handler is not None:
-            self.packet_handler.handle()
+            if self.packet_handler.setup():
+                self.running = True
+                self.packet_handler.on_setup()
+                self.packet_handler.handle()
 
 
 class MinecraftConnection(Connection):
@@ -91,7 +99,7 @@ class MinecraftConnection(Connection):
         """ JoinGame, ServerDifficulty, SpawnPosition, PlayerAbilities, Respawn """
         self.join_ids = [0x23, 0x0D, 0x46, 0x2C, 0x35]
         self.packet_logger = PacketLogger(self) # Logs incoming packets in another thread
-        self.packet_logger.start_threads()
+        self.packet_logger.start_worker_threads()
 
     """ Connect to the socket and start a connection thread """
     def connect(self):
@@ -100,11 +108,13 @@ class MinecraftConnection(Connection):
 
     def initialize_connection(self):
         self.connect()
+        # Should we wait here or is this blocking?
         self.start_server()
 
     def start_server(self):
-        self.server = MinecraftServer(self.server_port, self)
-        self.server.start()
+        # Override the old server interface
+        self.server = MinecraftServer(self, self.server_port)
+        self.server.start() # Start main thread
 
     """ Connect to the socket and start a connection thread """
     def connect(self):
@@ -114,19 +124,31 @@ class MinecraftConnection(Connection):
 
 class MinecraftServer(Connection):
     """ Used for listening on a port for a connection """
-    def __init__(self, port=25565, mc_connection=None):
+    def __init__(self, mc_connection, port=25565):
         super().__init__('localhost', port)
+        self.mc_connection = mc_connection
         self.packet_handler = ClientboundLoginHandler(self, mc_connection)
-        self.teleport_id = 2
+        self.teleport_id = 2 # TODO: remove this and use a state wrapper
+
+    def on_disconnect(self):
+        print("Called MinecraftServer::on_disconnect()...")
+        super().on_disconnect()
+        if self.mc_connection:
+            self.mc_connection.start_server()
 
     """ Bind to a socket and wait for a client to connect """
     def initialize_connection(self):
-        self.socket.bind(self.address)
-        self.socket.listen(1) # Listen for 1 incoming connection
+        try:
+            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            self.socket.bind(self.address)
+            print("Waiting for client")
+            self.socket.listen(1) # Listen for 1 incoming connection
 
-        print("Waiting for client", flush=True)
+            (connection, address) = self.socket.accept()
 
-        (connection, address) = self.socket.accept()
-
-        # Replace the server socket with the client's socket
-        self.initialize_socket(connection)
+            # Replace the server socket with the client's socket
+            # Maybe this is a bad idea because of race conditions
+            self.initialize_socket(connection)
+        except OSError:
+            import time
+            print("Failed to bind socket (race condition?), it's already on")
