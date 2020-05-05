@@ -1,5 +1,5 @@
 from src.networking.packet_handler import PacketHandler
-from src.networking.packets.clientbound import PlayerListItem
+from src.networking.packets.clientbound import PlayerListItem, KeepAlive
 
 import select
 
@@ -38,7 +38,8 @@ class IdleHandler(PacketHandler):
                             self.parse_player_list(packet)
 
                         # Forward the packets if a client is connected
-                        if self.connection.client_upstream:
+                        # Ignore KeepAlive's because those are processed by worker threads
+                        if packet.id != KeepAlive.id and self.connection.client_upstream:
                             self.connection.client_upstream.put(packet.compressed_buffer.bytes)
                     else:
                         print("Received invalid packet", flush=True)

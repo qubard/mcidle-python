@@ -12,6 +12,7 @@ from cryptography.hazmat.primitives.asymmetric.padding import PKCS1v15
 
 import select
 
+
 class LoginHandler(PacketHandler):
     def __init__(self, connection, mc_connection):
         super().__init__(connection)
