@@ -21,7 +21,6 @@ Make sure you connect with the exact game version that matches the mcidle server
 
 Simply run `pip install -r requirements.txt` to install all the necessary packages.
 
-
 # Notes
 
 When you provide arguments `username` and `password` to the CLI you do not need to provide them again so long as your credentials have not been invalidated. Your username and password are not saved and the login credentials are stored in `credentials.json` (keep these secret).
@@ -58,6 +57,10 @@ optional arguments:
   --dport DPORT    The port that mcidle listens on (default=1337)
 
 ```
+
+# Known Issues
+
+- Since Python is insanely slow, chunk processing is slow which can halt the processing of KeepAlives which means that the player can disconnect randomly. The only real solution to this is dedicating a separate thread just to KeepAlives or converting this to C/C++.
 
 # TODOs
 
