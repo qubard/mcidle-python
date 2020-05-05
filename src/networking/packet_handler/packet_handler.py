@@ -10,6 +10,7 @@ class PacketHandler:
     """ Generic packet handler responsible for processing incoming packets """
     def __init__(self, connection):
         self.connection = connection
+        self.nextHandler = None
 
     """ Setup the packet handler
         Return whether or not setup succeeded
@@ -24,6 +25,9 @@ class PacketHandler:
     """ Default behaviour is to consume packets """
     def handle(self):
         pass
+
+    def next_handler(self):
+        return self.nextHandler
 
     # TODO: Maybe put this in a separate class, like PacketStreamReader that takes a connection?
     """ Read the next packet from the stream """

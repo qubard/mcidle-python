@@ -18,6 +18,9 @@ class PacketBuffer:
     def reset_cursor(self):
         self.bytes_.seek(0)
 
+    def __len__(self):
+        return len(self.bytes)
+
     @property
     def bytes(self):
         return self.bytes_.getvalue()

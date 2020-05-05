@@ -26,37 +26,22 @@ class IdleHandler(PacketHandler):
     def handle(self):
         while self.connection.running:
             try:
+                # Read a packet from the target server
                 ready_to_read = select.select([self.connection.stream], [], [], self._timeout)[0]
-
                 if ready_to_read:
                     packet = self.read_packet_from_stream()
-
+                        
                     if packet:
                         if packet.id != PlayerListItem.id:
                             self.connection.packet_logger.enqueue(packet)
                         else:
                             self.parse_player_list(packet)
 
-                        # Bottleneck around here, we relay packets WAY too slowly apparently
-                        # We can try making packet reading multithreaded but essentially send_packet_buffer
-                        # takes too long and it'd be nice to chunk as many packets as we could in 50ms to the player
-                        # in one buffer
-
-                        # We can try just recv'ing a chunk of bytes instead and pushing it to a queue to be processed
-                        # in another thread.m
-
                         # Forward the packets if a client is connected
-                        if self.connection.client_connection:
-                            try:
-                                self.connection.client_connection.send_packet_buffer(packet.compressed_buffer)
-                            except (ConnectionAbortedError, BrokenPipeError, AttributeError):
-                                pass
+                        if self.connection.client_upstream:
+                            self.connection.client_upstream.put(packet.compressed_buffer.bytes)
                     else:
-                        raise EOFError()
+                        print("Received invalid packet", flush=True)
             except EOFError:
                 print("Disconnected from server, closing", flush=True)
-
-                # Panic and exit, TODO: try reconnecting at a regular interval
-                self.connection.running = False
-                if self.connection.client_connection:
-                    self.connection.client_connection.on_disconnect()
+                break

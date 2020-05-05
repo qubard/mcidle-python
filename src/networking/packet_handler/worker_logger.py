@@ -4,7 +4,7 @@ from src.networking.packets.clientbound import ChunkData, UnloadChunk, SpawnEnti
 
 import threading
 
-# TODO: There must be a better way of doing this
+
 class WorkerLogger(threading.Thread):
     def __init__(self, parent):
         threading.Thread.__init__(self)
@@ -23,14 +23,14 @@ class WorkerLogger(threading.Thread):
         chunk_key = (unload_chunk.ChunkX, unload_chunk.ChunkY)
         if chunk_key in self.parent.log[ChunkData.id]:
             del self.parent.log[ChunkData.id][chunk_key]
-            print("UnloadChunk", unload_chunk.ChunkX, unload_chunk.ChunkY)
+            print("UnloadChunk", unload_chunk.ChunkX, unload_chunk.ChunkY, flush=True)
 
     def chunk_load(self, packet):
         chunk_data = ChunkData().read(packet.packet_buffer)
         chunk_key = (chunk_data.ChunkX, chunk_data.ChunkY)
         if chunk_key not in self.parent.log[packet.id]:
             self.parent.log[packet.id][chunk_key] = packet
-        print("ChunkData", chunk_data.ChunkX, chunk_data.ChunkY)
+        print("ChunkData", chunk_data.ChunkX, chunk_data.ChunkY, flush=True)
 
     def spawn_entity(self, packet):
         spawn_entity = SpawnEntity().read(packet.packet_buffer)

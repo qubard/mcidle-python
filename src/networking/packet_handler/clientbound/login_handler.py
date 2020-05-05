@@ -39,14 +39,14 @@ class LoginHandler(PacketHandler):
         if id_ in self.mc_connection.packet_logger.log:
             packet_dict = self.mc_connection.packet_logger.log[id_]
             for packet in packet_dict.values():
-                self.connection.send_packet_buffer(packet.compressed_buffer)
+                self.connection.send_packet_buffer_raw(packet.compressed_buffer)
 
     def join_world(self):
         # Send the player all the packets that lets them join the world
         for id_ in self.mc_connection.join_ids:
             if id_ in self.mc_connection.packet_logger.log:
                 packet = self.mc_connection.packet_logger.log[id_]
-                self.connection.send_packet_buffer(packet.compressed_buffer)
+                self.connection.send_packet_buffer_raw(packet.compressed_buffer)
 
         # Send them their last position/look if it exists
         if PlayerPositionAndLookClientbound.id in self.mc_connection.packet_logger.log:
@@ -58,51 +58,55 @@ class LoginHandler(PacketHandler):
                     Yaw=self.mc_connection.last_yaw, Pitch=self.mc_connection.last_pitch, Flags=0, \
                     TeleportID=self.connection.teleport_id)
                 self.connection.teleport_id += 1
-                self.connection.send_packet(pos_packet)
+                self.connection.send_packet_raw(pos_packet)
             else:
-                self.connection.send_packet_buffer(
+                self.connection.send_packet_buffer_raw(
                     self.mc_connection.packet_logger.log[PlayerPositionAndLookClientbound.id] \
                         .compressed_buffer)  # Send the last packet that we got
 
         if TimeUpdate.id in self.mc_connection.packet_logger.log:
-            self.connection.send_packet_buffer(self.mc_connection.packet_logger.log[TimeUpdate.id].compressed_buffer)
+            self.connection.send_packet_buffer_raw(self.mc_connection.packet_logger.log[TimeUpdate.id].compressed_buffer)
 
         # Send the player list items (to see other players)
         self.send_packet_dict(PlayerListItem.id)
 
         # Send all loaded chunks
-        print("Sending chunks")
+        print("Sending chunks", flush=True)
         self.send_packet_dict(ChunkData.id)
-        print("Done sending chunks")
+        print("Done sending chunks", flush=True)
 
         # Send the player all the currently loaded entities
         self.send_packet_dict(SpawnEntity.id)
 
         # Player sends ClientStatus, this is important for respawning if died
-        self.mc_connection.send_packet(ClientStatus(ActionID=0))
+        self.mc_connection.send_packet_raw(ClientStatus(ActionID=0))
 
         # Send their last held item
-        self.connection.send_packet(HeldItemChange(Slot=self.mc_connection.held_item_slot))
+        self.connection.send_packet_raw(HeldItemChange(Slot=self.mc_connection.held_item_slot))
 
     def setup(self):
-        print("Reading handshake")
+        print("Reading handshake", flush=True)
         Handshake().read(self.read_packet_from_stream().packet_buffer)
-        print("Reading login start")
+        print("Reading login start", flush=True)
         LoginStart().read(self.read_packet_from_stream().packet_buffer)
 
         # Generate a dummy (pubkey, privkey) pair
         privkey = rsa.generate_private_key(public_exponent=65537, key_size=2048, backend=default_backend())
         pubkey = privkey.public_key().public_bytes(encoding=serialization.Encoding.DER,
                                                    format=serialization.PublicFormat.SubjectPublicKeyInfo)
-        self.connection.send_packet(
+
+        print("Trying to send encryption request", flush=True)
+        self.connection.send_packet_raw(
             EncryptionRequest(ServerID='', PublicKey=pubkey, VerifyToken=self.mc_connection.VerifyToken))
+
+        print("Encryption request sent", flush=True)
 
         # The encryption response will be encrypted with the server's public key
         # Luckily, when this goes wrong read_packet returns None
         _ = self.read_packet_from_stream()
 
         if _ is None:
-            print("Invalid packet!")
+            print("Invalid packet!", flush=True)
             self.connection.on_disconnect()
             return False
 
@@ -120,24 +124,25 @@ class LoginHandler(PacketHandler):
 
         # Enable compression and assign the threshold to the connection
         if self.mc_connection.compression_threshold >= 0:
-            self.connection.send_packet(SetCompression(Threshold=self.mc_connection.compression_threshold))
+            self.connection.send_packet_raw(SetCompression(Threshold=self.mc_connection.compression_threshold))
             self.connection.compression_threshold = self.mc_connection.compression_threshold
 
-        self.connection.send_packet(self.mc_connection.login_success)
+        self.connection.send_packet_raw(self.mc_connection.login_success)
 
-        print("Joining world")
+        print("Joining world", flush=True)
         self.join_world()
-        print("Finished joining world")
+        print("Finished joining world", flush=True)
 
         # Let the real connection know about our client
-        self.mc_connection.client_connection = self.connection
+        # Now the client can start receiving forwarded data
+        self.connection.get_upstream().start()
+        self.mc_connection.client_upstream = self.connection.get_upstream()
+        print("Connected to upstream", flush=True)
 
         return True
 
-    # We need to switch to another handler here instead
-    # This runs in the connection thread
     def handle(self):
-        while self.connection.running:
+        while True:
             ready_to_read = select.select([self.connection.stream], [], [], self._timeout)[0]
 
             if ready_to_read:
@@ -149,7 +154,7 @@ class LoginHandler(PacketHandler):
                         self.handle_held_item_change(packet)
                         self.mc_connection.send_packet_buffer(packet.compressed_buffer)
                 else:
-                    print("DCed? Exiting thread")
+                    print("Client disconnected (invalid packet). Exiting thread", flush=True)
                     self.connection.on_disconnect()
                     break
 
