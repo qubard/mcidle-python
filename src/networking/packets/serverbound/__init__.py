@@ -32,6 +32,14 @@ class HeldItemChange(Packet):
     }
 
 
+class PlayerAbilities(Packet):
+    id = 0x13
+    definition = {
+        "Flags": Byte,
+        "FlyingSpeed": Float,
+        "WalkingSpeed": Float,
+    }
+
 class LoginStart(Packet):
     id = 0x00
     definition = {

@@ -1,9 +1,11 @@
 from src.networking.packet_handler import PacketHandler
 from src.networking.packets.serverbound import Handshake, LoginStart, EncryptionResponse, ClientStatus, \
-    PlayerPositionAndLook, TeleportConfirm
-from src.networking.packets.clientbound import EncryptionRequest, SetCompression, SpawnEntity, ChunkData, \
-    TimeUpdate, HeldItemChange, PlayerListItem, GameState, SetSlot
+    PlayerPositionAndLook, TeleportConfirm, HeldItemChange, PlayerAbilities
+from src.networking.packets.clientbound import EncryptionRequest, SetCompression, \
+    TimeUpdate, GameState
 from src.networking.packets.clientbound import PlayerPositionAndLook as PlayerPositionAndLookClientbound
+from src.networking.packets.clientbound import HeldItemChange as HeldItemChangeClientbound
+from src.networking.packets.clientbound import PlayerAbilities as PlayerAbilitiesClientbound
 
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives.asymmetric import rsa
@@ -17,6 +19,19 @@ class LoginHandler(PacketHandler):
     def __init__(self, connection, mc_connection):
         super().__init__(connection)
         self.mc_connection = mc_connection
+
+    def handle_player_abilities(self, packet):
+        if packet.id != PlayerAbilities.id:
+            return
+
+        self.mc_connection.game_state.acquire()
+
+        abilities = PlayerAbilities().read(packet.packet_buffer)
+        self.mc_connection.game_state.abilities = PlayerAbilitiesClientbound(Flags=abilities.Flags, \
+                                                                             FlyingSpeed=abilities.FlyingSpeed, \
+                                                                             FOV=abilities.WalkingSpeed)
+
+        self.mc_connection.game_state.release()
 
     def handle_held_item_change(self, packet):
         if packet.id != HeldItemChange.id:
@@ -53,6 +68,9 @@ class LoginHandler(PacketHandler):
                 packet = self.mc_connection.game_state.packet_log[id_]
                 self.connection.send_packet_buffer_raw(packet.compressed_buffer)
 
+        # Send their player abilities
+        self.connection.send_packet_raw(self.mc_connection.game_state.abilities)
+
         # Send them their last position/look if it exists
         if PlayerPositionAndLookClientbound.id in self.mc_connection.game_state.packet_log:
             if self.mc_connection and self.mc_connection.game_state.last_pos_packet:
@@ -87,14 +105,14 @@ class LoginHandler(PacketHandler):
         # Player sends ClientStatus, this is important for respawning if died
         self.mc_connection.send_packet_raw(ClientStatus(ActionID=0))
 
+        # Send their last held item
+        self.connection.send_packet_raw(HeldItemChangeClientbound(Slot=self.mc_connection.game_state.held_item_slot))
+
         # Send their current game state
         self.connection.send_packet_raw(GameState(Reason=self.mc_connection.game_state.gs_reason,\
                                                     Value=self.mc_connection.game_state.gs_value))
         # Send their inventory
         self.connection.send_single_packet_dict(self.mc_connection.game_state.main_inventory)
-
-        # Send their last held item
-        self.connection.send_packet_raw(HeldItemChange(Slot=self.mc_connection.game_state.held_item_slot))
 
         self.mc_connection.game_state.release()
 
@@ -166,6 +184,7 @@ class LoginHandler(PacketHandler):
                     if packet and packet.id != TeleportConfirm.id: # Sending these will crash us
                         self.handle_position(packet)
                         self.handle_held_item_change(packet)
+                        self.handle_player_abilities(packet)
                         self.mc_connection.send_packet_buffer(packet.compressed_buffer)
                 else:
                     print("Client disconnected (invalid packet). Exiting thread", flush=True)

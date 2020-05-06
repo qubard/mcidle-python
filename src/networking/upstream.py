@@ -4,7 +4,6 @@ from multiprocessing import Queue
 
 
 class UpstreamThread(threading.Thread):
-
     def __init__(self):
         threading.Thread.__init__(self)
         self.queue = Queue()
@@ -32,6 +31,7 @@ class UpstreamThread(threading.Thread):
     def run(self):
         while self.running:
             if not self.queue.empty():
+                # Acquire the lock since socket can be None when set in another thread
                 with self.socket_lock:
                     if self.socket:
                         while not self.queue.empty():

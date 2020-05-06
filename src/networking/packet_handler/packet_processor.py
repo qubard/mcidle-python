@@ -1,7 +1,7 @@
 from src.networking.packets.serverbound import KeepAlive as KeepAliveServerbound, TeleportConfirm
 from src.networking.packets.clientbound import ChunkData, UnloadChunk, SpawnEntity, \
     DestroyEntities, KeepAlive, ChatMessage, PlayerPositionAndLook, TimeUpdate, \
-    HeldItemChange, SetSlot, PlayerListItem
+    HeldItemChange, SetSlot, PlayerListItem, PlayerAbilities
 
 from src.networking.packets.clientbound import GameState as GameStateP
 
@@ -52,21 +52,21 @@ class ClientboundProcessor(PacketProcessor):
 
     def chunk_unload(self, packet):
         unload_chunk = UnloadChunk().read(packet.packet_buffer)
-        chunk_key = (unload_chunk.ChunkX, unload_chunk.ChunkY)
+        chunk_key = (unload_chunk.ChunkX, unload_chunk.ChunkZ)
         if chunk_key in self.game_state.chunks:
             del self.game_state.chunks[chunk_key]
-            print("UnloadChunk", unload_chunk.ChunkX, unload_chunk.ChunkY, flush=True)
+            print("UnloadChunk", unload_chunk.ChunkX, unload_chunk.ChunkZ, flush=True)
 
     def chunk_load(self, packet):
         chunk_data = ChunkData().read(packet.packet_buffer)
-        chunk_key = (chunk_data.ChunkX, chunk_data.ChunkY)
+        chunk_key = (chunk_data.ChunkX, chunk_data.ChunkZ)
         if chunk_key not in self.game_state.chunks:
             self.game_state.chunks[chunk_key] = packet
-            print("ChunkData", chunk_data.ChunkX, chunk_data.ChunkY, flush=True)
+            print("ChunkData", chunk_data.ChunkX, chunk_data.ChunkZ, flush=True)
 
     def process_packet(self, packet):
         with self.game_state.state_lock:
-            if packet.id in self.game_state.jon_ids:
+            if packet.id in self.game_state.join_ids:
                 self.game_state.packet_log[packet.id] = packet
             elif packet.id == ChunkData.id:  # ChunkData
                 self.chunk_load(packet)
@@ -104,6 +104,7 @@ class ClientboundProcessor(PacketProcessor):
                 self.game_state.main_inventory[set_slot.Slot] = packet
             elif packet.id == PlayerListItem.id:
                 self.player_list(packet)
-
+            elif packet.id == PlayerAbilities.id:
+                self.game_state.abilities = PlayerAbilities().read(packet.packet_buffer)
 
         return None

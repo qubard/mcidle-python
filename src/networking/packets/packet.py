@@ -5,6 +5,7 @@ from base64 import b64encode
 
 from .exceptions import InvalidPacketID
 
+
 class Packet:
     id = None
     ids = None

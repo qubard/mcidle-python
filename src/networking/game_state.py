@@ -2,7 +2,6 @@ from threading import RLock
 
 
 class GameState:
-
     def __init__(self, join_ids=[]):
         self.held_item_slot = 0
         self.last_pos_packet = None
@@ -12,6 +11,8 @@ class GameState:
 
         self.gs_reason = 0
         self.gs_value = 0.0
+
+        self.abilities = None
 
         self.state_lock = RLock()
 

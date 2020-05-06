@@ -68,17 +68,27 @@ class SetSlot(Packet):
 
 class ChunkData(Packet):
     id = 0x20
-    definition =  {
+    definition = {
         "ChunkX": Integer,
-        "ChunkY": Integer
+        "ChunkZ": Integer
     }
+
+    def read_fields(self, packet_buffer):
+        self.ChunkX = Integer.read(packet_buffer)
+        self.ChunkZ = Integer.read(packet_buffer)
+        self.GroundUpContinuous = Boolean.read(packet_buffer)
+        self.PrimaryBitMask = VarInt.read(packet_buffer)
+        self.Data = VarIntPrefixedByteArray.read(packet_buffer)
+
+        self.NumBlockEnts = VarInt.read(packet_buffer)
+
 
 
 class UnloadChunk(Packet):
     id = 0x1D
     definition =  {
         "ChunkX": Integer,
-        "ChunkY": Integer
+        "ChunkZ": Integer
     }
 
 
@@ -139,6 +149,14 @@ class Disconnect(Packet):
         "Reason": String
     }
 
+
+class PlayerAbilities(Packet):
+    id = 0x2C
+    definition = {
+        "Flags": Byte,
+        "FlyingSpeed": Float,
+        "FOV": Float,
+    }
 
 class PlayerListItem(Packet):
     id = 0x2E

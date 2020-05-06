@@ -5,7 +5,6 @@ import select
 
 
 class IdleHandler(PacketHandler):
-
     # Idling occurs when we've disconnected our client or have yet to connect
     def handle(self):
         while self.connection.running:

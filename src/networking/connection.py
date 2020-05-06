@@ -116,8 +116,8 @@ class MinecraftConnection(Connection):
         self.server = None
         self.server_port = server_port
 
-        # JoinGame, ServerDifficulty, SpawnPosition, PlayerAbilities, Respawn
-        join_ids = [0x23, 0x0D, 0x46, 0x2C, 0x35]
+        # JoinGame, ServerDifficulty, SpawnPosition, Respawn
+        join_ids = [0x23, 0x0D, 0x46, 0x35]
         self.game_state = GameState(join_ids)
 
         self.packet_processor = ClientboundProcessor(self.game_state)

@@ -11,12 +11,16 @@ class WorkerProcessor(threading.Thread):
         self.connection = connection
         self.packet_processor = packet_processor
         self.queue = Queue()
+        self.running = True
 
     def enqueue(self, packet):
         self.queue.put(packet)
 
+    def stop(self):
+        self.running = False
+
     def run(self):
-        while True:
+        while self.running:
             if not self.queue.empty():
                 packet = self.queue.get()
                 response = self.packet_processor.process_packet(packet)
