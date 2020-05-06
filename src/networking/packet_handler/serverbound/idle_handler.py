@@ -6,7 +6,7 @@ import select
 
 class IdleHandler(PacketHandler):
 
-    """ Idling occurs when we've disconnected our client or have yet to connect """
+    # Idling occurs when we've disconnected our client or have yet to connect
     def handle(self):
         while self.connection.running:
             try:
@@ -20,8 +20,11 @@ class IdleHandler(PacketHandler):
 
                         # Forward the packets if a client is connected
                         # Ignore KeepAlive's because those are processed by worker threads
-                        if packet.id != KeepAlive.id and self.connection.client_upstream:
-                            self.connection.client_upstream.put(packet.compressed_buffer.bytes)
+                        # This is thread safe because the old connection is only reassigned never deleted
+                        # so while we have a reference it can't be None
+                        # Since client_upstream is set in another thread it is wrapped in an RLock
+                        if packet.id != KeepAlive.id:
+                            self.connection.put_upstream(packet)
                     else:
                         print("Received invalid packet", flush=True)
             except EOFError:

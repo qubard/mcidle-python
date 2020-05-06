@@ -9,11 +9,11 @@ class UpstreamThread(threading.Thread):
         threading.Thread.__init__(self)
         self.queue = Queue()
         self.socket = None
-        self.lock = threading.RLock()
+        self.socket_lock = threading.RLock()
         self.running = False
 
     def set_socket(self, socket):
-        with self.lock:
+        with self.socket_lock:
             self.socket = socket
 
     def put(self, b):
@@ -32,7 +32,7 @@ class UpstreamThread(threading.Thread):
     def run(self):
         while self.running:
             if not self.queue.empty():
-                with self.lock:
+                with self.socket_lock:
                     if self.socket:
                         while not self.queue.empty():
                             pkt = self.queue.get()

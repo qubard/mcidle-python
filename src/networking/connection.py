@@ -33,9 +33,6 @@ class Connection(threading.Thread):
 
         self.initialize_socket(socket.socket())
 
-    def get_upstream(self):
-        return self.upstream
-
     def initialize_socket(self, sock):
         self.socket = sock
         """ Create a read only blocking file interface (stream) for the socket """
@@ -127,7 +124,8 @@ class MinecraftConnection(Connection):
         self.packet_processor = ClientboundProcessor(self.game_state)
 
         self.client_connection = None
-        self.client_upstream = None
+        self.local_client_upstream = None
+        self.client_upstream_lock = RLock()
 
         self.auth = Auth(username, profile)
 
@@ -147,6 +145,21 @@ class MinecraftConnection(Connection):
         with self.game_state_lock:
             return self.local_game_state
 
+    @property
+    def client_upstream(self):
+        with self.client_upstream_lock:
+            return self.local_client_upstream
+
+    def set_client_upstream(self, upstream):
+        with self.client_upstream_lock:
+            self.local_client_upstream = upstream
+
+    # Guarantees upstream is not set to None while putting
+    def put_upstream(self, packet):
+        with self.client_upstream_lock:
+            if self.client_upstream:
+                self.client_upstream.put(packet.compressed_buffer.bytes)
+
     """ Connect to the socket and start a connection thread """
     def connect(self):
         self.socket.connect(self.address)
@@ -165,7 +178,7 @@ class MinecraftConnection(Connection):
         # Override the old server interface
         # And stop the old thread
         if self.server is not None:
-            self.server.get_upstream().stop()
+            self.server.upstream.stop()
 
         self.server = MinecraftServer(self, self.server_port)
         self.server.start() # Start main thread

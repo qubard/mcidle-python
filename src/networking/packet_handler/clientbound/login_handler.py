@@ -136,8 +136,8 @@ class LoginHandler(PacketHandler):
 
         # Let the real connection know about our client
         # Now the client can start receiving forwarded data
-        self.connection.get_upstream().start()
-        self.mc_connection.client_upstream = self.connection.get_upstream()
+        self.connection.upstream.start()
+        self.mc_connection.set_client_upstream(self.connection.upstream)
         print("Connected to upstream", flush=True)
 
         return True

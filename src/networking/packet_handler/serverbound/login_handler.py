@@ -69,7 +69,7 @@ class LoginHandler(PacketHandler):
             self.connection.get_upstream().start()
             return False
 
-        self.connection.get_upstream().start()
+        self.connection.upstream.start()
 
         return True
 
