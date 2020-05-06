@@ -1,6 +1,6 @@
 from src.networking.packets.serverbound import KeepAlive as KeepAliveServerbound, TeleportConfirm
-from src.networking.packets.clientbound import ChunkData, UnloadChunk, SpawnEntity, Disconnect, \
-    DestroyEntities, KeepAlive, ChatMessage, PlayerPositionAndLook, TimeUpdate, HeldItemChange
+from src.networking.packets.clientbound import ChunkData, UnloadChunk, SpawnEntity, \
+    DestroyEntities, KeepAlive, ChatMessage, PlayerPositionAndLook, TimeUpdate, HeldItemChange, GameState
 
 import threading
 
@@ -30,7 +30,7 @@ class WorkerLogger(threading.Thread):
         chunk_key = (chunk_data.ChunkX, chunk_data.ChunkY)
         if chunk_key not in self.parent.log[packet.id]:
             self.parent.log[packet.id][chunk_key] = packet
-        print("ChunkData", chunk_data.ChunkX, chunk_data.ChunkY, flush=True)
+            print("ChunkData", chunk_data.ChunkX, chunk_data.ChunkY, flush=True)
 
     def spawn_entity(self, packet):
         spawn_entity = SpawnEntity().read(packet.packet_buffer)
@@ -69,6 +69,10 @@ class WorkerLogger(threading.Thread):
             self.parent.log[packet.id] = packet
         elif packet.id == HeldItemChange.id:
             self.parent.connection.held_item_slot = HeldItemChange().read(packet.packet_buffer).Slot
+        elif packet.id == GameState.id:
+            gamestate = GameState().read(packet.packet_buffer)
+            self.parent.connection.gsReason = gamestate.Reason
+            self.parent.connection.gsValue = gamestate.Value
 
     def run(self):
         while True:

@@ -112,6 +112,9 @@ class MinecraftConnection(Connection):
         self.last_yaw = 0
         self.last_pitch = 0
 
+        self.gsReason = 0
+        self.gsValue = 0.0
+
         self.client_connection = None
         self.client_upstream = None
 
@@ -124,8 +127,10 @@ class MinecraftConnection(Connection):
 
         """ JoinGame, ServerDifficulty, SpawnPosition, PlayerAbilities, Respawn """
         self.join_ids = [0x23, 0x0D, 0x46, 0x2C, 0x35]
-        self.packet_logger = PacketLogger(self) # Logs incoming packets in another thread
-        self.packet_logger.start_worker_threads()
+
+        # Initialize the chunk logger/generic packet logger and run them
+        self.packet_logger = PacketLogger(self)
+        self.packet_logger.start_worker_thread()
 
     """ Connect to the socket and start a connection thread """
     def connect(self):

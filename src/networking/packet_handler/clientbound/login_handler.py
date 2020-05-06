@@ -2,7 +2,7 @@ from src.networking.packet_handler import PacketHandler
 from src.networking.packets.serverbound import Handshake, LoginStart, EncryptionResponse, ClientStatus, \
     PlayerPositionAndLook, TeleportConfirm
 from src.networking.packets.clientbound import EncryptionRequest, SetCompression, SpawnEntity, ChunkData, \
-    TimeUpdate, HeldItemChange, PlayerListItem
+    TimeUpdate, HeldItemChange, PlayerListItem, GameState
 from src.networking.packets.clientbound import PlayerPositionAndLook as PlayerPositionAndLookClientbound
 
 from cryptography.hazmat.backends import default_backend
@@ -36,9 +36,9 @@ class LoginHandler(PacketHandler):
         # Replace the currently logged PlayerPositionAndLookClientbound packet
         self.mc_connection.last_pos_packet = pos_packet
 
-    def send_packet_dict(self, id_):
-        if id_ in self.mc_connection.packet_logger.log:
-            packet_dict = self.mc_connection.packet_logger.log[id_]
+    def send_packet_dict(self, id_, logger):
+        if id_ in logger.log:
+            packet_dict = logger.log[id_]
             for packet in packet_dict.values():
                 self.connection.send_packet_buffer_raw(packet.compressed_buffer)
 
@@ -69,18 +69,22 @@ class LoginHandler(PacketHandler):
             self.connection.send_packet_buffer_raw(self.mc_connection.packet_logger.log[TimeUpdate.id].compressed_buffer)
 
         # Send the player list items (to see other players)
-        self.send_packet_dict(PlayerListItem.id)
+        self.send_packet_dict(PlayerListItem.id, self.mc_connection.packet_logger)
 
         # Send all loaded chunks
         print("Sending chunks", flush=True)
-        self.send_packet_dict(ChunkData.id)
+        self.send_packet_dict(ChunkData.id, self.mc_connection.packet_logger)
         print("Done sending chunks", flush=True)
 
         # Send the player all the currently loaded entities
-        self.send_packet_dict(SpawnEntity.id)
+        self.send_packet_dict(SpawnEntity.id, self.mc_connection.packet_logger)
 
         # Player sends ClientStatus, this is important for respawning if died
         self.mc_connection.send_packet_raw(ClientStatus(ActionID=0))
+
+        # Send their current game state
+        self.connection.send_packet_raw(GameState(Reason=self.mc_connection.gsReason,\
+                                                    Value=self.mc_connection.gsValue))
 
         # Send their last held item
         self.connection.send_packet_raw(HeldItemChange(Slot=self.mc_connection.held_item_slot))

@@ -106,6 +106,14 @@ class PlayerPositionAndLook(Packet):
     }
 
 
+class GameState(Packet):
+    id = 0x1E
+    definition = {
+        "Reason": Byte,
+        "Value": Float,
+    }
+
+
 class Disconnect(Packet):
     id = 0x1A
     definition = {

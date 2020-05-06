@@ -1,5 +1,5 @@
 from src.networking.packet_handler import PacketHandler
-from src.networking.packets.clientbound import PlayerListItem, KeepAlive
+from src.networking.packets.clientbound import PlayerListItem, KeepAlive, ChunkData
 
 import select
 
@@ -30,7 +30,6 @@ class IdleHandler(PacketHandler):
                 ready_to_read = select.select([self.connection.stream], [], [], self._timeout)[0]
                 if ready_to_read:
                     packet = self.read_packet_from_stream()
-                        
                     if packet:
                         if packet.id != PlayerListItem.id:
                             self.connection.packet_logger.enqueue(packet)
