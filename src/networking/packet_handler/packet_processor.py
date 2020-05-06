@@ -7,10 +7,18 @@ from src.networking.packets.clientbound import GameState as GameStateP
 
 
 class PacketProcessor:
-
     # A packet processor processes packets and mutates the game state
     def __init__(self, game_state):
         self.game_state = game_state
+
+    # Processes a packet and returns a response packet if needed
+    def process_packet(self, packet):
+        return None
+
+
+class ClientboundProcessor(PacketProcessor):
+    def __init__(self, game_state):
+        super().__init__(game_state)
 
     def destroy_entities(self, packet):
         destroy_entities = DestroyEntities().read(packet.packet_buffer)
@@ -56,7 +64,6 @@ class PacketProcessor:
             self.game_state.chunks[chunk_key] = packet
             print("ChunkData", chunk_data.ChunkX, chunk_data.ChunkY, flush=True)
 
-    # Processes a packet and returns a response packet if needed
     def process_packet(self, packet):
         if packet.id in self.game_state.join_ids:
             self.game_state.packet_log[packet.id] = packet

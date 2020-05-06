@@ -15,7 +15,8 @@ class IdleHandler(PacketHandler):
                 if ready_to_read:
                     packet = self.read_packet_from_stream()
                     if packet:
-                        self.connection.packet_logger.enqueue(packet)
+                        # Entirely thread safe (worker processor only read, not destroyed)
+                        self.connection.worker_processor.enqueue(packet)
 
                         # Forward the packets if a client is connected
                         # Ignore KeepAlive's because those are processed by worker threads

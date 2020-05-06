@@ -6,7 +6,7 @@ from src.networking.encryption import *
 from src.networking.packet_handler.serverbound import LoginHandler as ServerboundLoginHandler
 from src.networking.packet_handler.clientbound import LoginHandler as ClientboundLoginHandler
 
-from src.networking.packet_handler import PacketLogger, PacketProcessor
+from src.networking.packet_handler import WorkerProcessor, ClientboundProcessor
 
 from src.networking.upstream import UpstreamThread
 
@@ -124,7 +124,7 @@ class MinecraftConnection(Connection):
         self.game_state_lock = threading.RLock()
         self.local_game_state = GameState(join_ids)
 
-        self.packet_processor = PacketProcessor(self.game_state)
+        self.packet_processor = ClientboundProcessor(self.game_state)
 
         self.client_connection = None
         self.client_upstream = None
@@ -136,9 +136,9 @@ class MinecraftConnection(Connection):
 
         self.packet_handler = ServerboundLoginHandler(self)
 
-        # Initialize the generic packet logger and run it
-        self.packet_logger = PacketLogger(self)
-        self.packet_logger.start_worker_thread()
+        # Process packets in another thread
+        self.worker_processor = WorkerProcessor(self, self.packet_processor)
+        self.worker_processor.start()
 
     # Packet processor accesses game state, so use a re-entrant lock
     # to make sure this is entirely safe but at the same time performant
