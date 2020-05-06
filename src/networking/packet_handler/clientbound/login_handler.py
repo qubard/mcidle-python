@@ -22,20 +22,31 @@ class LoginHandler(PacketHandler):
         if packet.id != HeldItemChange.id:
             return
 
+        self.mc_connection.game_state.acquire()
+
         self.mc_connection.game_state.held_item_slot = HeldItemChange().read(packet.packet_buffer).Slot
+
+        self.mc_connection.game_state.release()
 
     def handle_position(self, packet):
         if packet.id != PlayerPositionAndLook.id:
             return
 
         pos_packet = PlayerPositionAndLook().read(packet.packet_buffer)
+
+        self.mc_connection.game_state.acquire()
+
         self.mc_connection.game_state.last_yaw = pos_packet.Yaw
         self.mc_connection.game_state.last_pitch = pos_packet.Pitch
 
         # Replace the currently logged PlayerPositionAndLookClientbound packet
         self.mc_connection.game_state.last_pos_packet = pos_packet
 
+        self.mc_connection.game_state.release()
+
     def join_world(self):
+        self.mc_connection.game_state.acquire()
+
         # Send the player all the packets that lets them join the world
         for id_ in self.mc_connection.game_state.join_ids:
             if id_ in self.mc_connection.game_state.packet_log:
@@ -84,6 +95,8 @@ class LoginHandler(PacketHandler):
 
         # Send their last held item
         self.connection.send_packet_raw(HeldItemChange(Slot=self.mc_connection.game_state.held_item_slot))
+
+        self.mc_connection.game_state.release()
 
     def setup(self):
         print("Reading handshake", flush=True)

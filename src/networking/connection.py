@@ -118,12 +118,12 @@ class MinecraftConnection(Connection):
 
         # JoinGame, ServerDifficulty, SpawnPosition, PlayerAbilities, Respawn
         join_ids = [0x23, 0x0D, 0x46, 0x2C, 0x35]
-        self.game_state_lock = threading.RLock()
-        self.local_game_state = GameState(join_ids)
+        self.game_state = GameState(join_ids)
 
         self.packet_processor = ClientboundProcessor(self.game_state)
 
         self.client_connection = None
+
         self.local_client_upstream = None
         self.client_upstream_lock = RLock()
 
@@ -138,17 +138,9 @@ class MinecraftConnection(Connection):
         self.worker_processor = WorkerProcessor(self, self.packet_processor)
         self.worker_processor.start()
 
-    # Packet processor accesses game state, so use a re-entrant lock
-    # to make sure this is entirely safe but at the same time performant
-    @property
-    def game_state(self):
-        with self.game_state_lock:
-            return self.local_game_state
-
     @property
     def client_upstream(self):
-        with self.client_upstream_lock:
-            return self.local_client_upstream
+        return self.local_client_upstream
 
     def set_client_upstream(self, upstream):
         with self.client_upstream_lock:

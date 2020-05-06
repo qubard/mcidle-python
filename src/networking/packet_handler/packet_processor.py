@@ -65,43 +65,45 @@ class ClientboundProcessor(PacketProcessor):
             print("ChunkData", chunk_data.ChunkX, chunk_data.ChunkY, flush=True)
 
     def process_packet(self, packet):
-        if packet.id in self.game_state.join_ids:
-            self.game_state.packet_log[packet.id] = packet
-        elif packet.id == ChunkData.id:  # ChunkData
-            self.chunk_load(packet)
-        elif packet.id == UnloadChunk.id:  # UnloadChunk
-            self.chunk_unload(packet)
-        elif packet.id in SpawnEntity.ids:
-            self.spawn_entity(packet)
-        elif packet.id == DestroyEntities.id:
-            self.destroy_entities(packet)
-        elif packet.id == KeepAlive.id:  # KeepAlive Clientbound
-            keep_alive = KeepAlive().read(packet.packet_buffer)
-            print("Responded to KeepAlive", keep_alive, flush=True)
-            return KeepAliveServerbound(KeepAliveID=keep_alive.KeepAliveID)
-        elif packet.id == ChatMessage.id:
-            chat_message = ChatMessage().read(packet.packet_buffer)
-            print(chat_message, flush=True)
-        elif packet.id == PlayerPositionAndLook.id:
-            pos_packet = PlayerPositionAndLook().read(packet.packet_buffer)
+        with self.game_state.state_lock:
+            if packet.id in self.game_state.jon_ids:
+                self.game_state.packet_log[packet.id] = packet
+            elif packet.id == ChunkData.id:  # ChunkData
+                self.chunk_load(packet)
+            elif packet.id == UnloadChunk.id:  # UnloadChunk
+                self.chunk_unload(packet)
+            elif packet.id in SpawnEntity.ids:
+                self.spawn_entity(packet)
+            elif packet.id == DestroyEntities.id:
+                self.destroy_entities(packet)
+            elif packet.id == KeepAlive.id:  # KeepAlive Clientbound
+                keep_alive = KeepAlive().read(packet.packet_buffer)
+                print("Responded to KeepAlive", keep_alive, flush=True)
+                return KeepAliveServerbound(KeepAliveID=keep_alive.KeepAliveID)
+            elif packet.id == ChatMessage.id:
+                chat_message = ChatMessage().read(packet.packet_buffer)
+                print(chat_message, flush=True)
+            elif packet.id == PlayerPositionAndLook.id:
+                pos_packet = PlayerPositionAndLook().read(packet.packet_buffer)
 
-            # Log the packet
-            self.game_state.packet_log[packet.id] = packet
+                # Log the packet
+                self.game_state.packet_log[packet.id] = packet
 
-            # Send back a teleport confirm
-            return TeleportConfirm(TeleportID=pos_packet.TeleportID)
-        elif packet.id == TimeUpdate.id:
-            self.game_state.packet_log[packet.id] = packet
-        elif packet.id == HeldItemChange.id:
-            self.game_state.held_item_slot = HeldItemChange().read(packet.packet_buffer).Slot
-        elif packet.id == GameStateP.id:
-            game_state = GameStateP().read(packet.packet_buffer)
-            self.game_state.gs_reason = game_state.Reason
-            self.game_state.gs_value = game_state.Value
-        elif packet.id == SetSlot.id:
-            set_slot = SetSlot().read(packet.packet_buffer)
-            self.game_state.main_inventory[set_slot.Slot] = packet
-        elif packet.id == PlayerListItem.id:
-            self.player_list(packet)
+                # Send back a teleport confirm
+                return TeleportConfirm(TeleportID=pos_packet.TeleportID)
+            elif packet.id == TimeUpdate.id:
+                self.game_state.packet_log[packet.id] = packet
+            elif packet.id == HeldItemChange.id:
+                self.game_state.held_item_slot = HeldItemChange().read(packet.packet_buffer).Slot
+            elif packet.id == GameStateP.id:
+                game_state = GameStateP().read(packet.packet_buffer)
+                self.game_state.gs_reason = game_state.Reason
+                self.game_state.gs_value = game_state.Value
+            elif packet.id == SetSlot.id:
+                set_slot = SetSlot().read(packet.packet_buffer)
+                self.game_state.main_inventory[set_slot.Slot] = packet
+            elif packet.id == PlayerListItem.id:
+                self.player_list(packet)
+
 
         return None

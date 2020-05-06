@@ -1,3 +1,6 @@
+from threading import RLock
+
+
 class GameState:
 
     def __init__(self, join_ids=[]):
@@ -10,6 +13,8 @@ class GameState:
         self.gs_reason = 0
         self.gs_value = 0.0
 
+        self.state_lock = RLock()
+
         # Every other packet goes here
         self.packet_log = {}
 
@@ -19,3 +24,9 @@ class GameState:
         self.entities = {}
 
         self.join_ids = join_ids
+
+    def acquire(self):
+        self.state_lock.acquire()
+
+    def release(self):
+        self.state_lock.release()
