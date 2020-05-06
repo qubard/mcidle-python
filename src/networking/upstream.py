@@ -9,7 +9,7 @@ class UpstreamThread(threading.Thread):
         threading.Thread.__init__(self)
         self.queue = Queue()
         self.socket = None
-        self.lock = threading.Lock()
+        self.lock = threading.RLock()
         self.running = False
 
     def set_socket(self, socket):

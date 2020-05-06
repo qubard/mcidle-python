@@ -109,7 +109,7 @@ class Connection(threading.Thread):
                 
                 self.packet_handler.handle()
 
-
+# Assume that a MinecraftConnection has to stay active at all times
 class MinecraftConnection(Connection):
     def __init__(self, username, ip, protocol, port=25565, server_port=1001, profile=None):
         super().__init__(ip, port)
@@ -121,7 +121,8 @@ class MinecraftConnection(Connection):
 
         # JoinGame, ServerDifficulty, SpawnPosition, PlayerAbilities, Respawn
         join_ids = [0x23, 0x0D, 0x46, 0x2C, 0x35]
-        self.game_state = GameState(join_ids)
+        self.game_state_lock = threading.RLock()
+        self.local_game_state = GameState(join_ids)
 
         self.packet_processor = PacketProcessor(self.game_state)
 
@@ -135,10 +136,16 @@ class MinecraftConnection(Connection):
 
         self.packet_handler = ServerboundLoginHandler(self)
 
-
-        # Initialize the chunk logger/generic packet logger and run them
+        # Initialize the generic packet logger and run it
         self.packet_logger = PacketLogger(self)
         self.packet_logger.start_worker_thread()
+
+    # Packet processor accesses game state, so use a re-entrant lock
+    # to make sure this is entirely safe but at the same time performant
+    @property
+    def game_state(self):
+        with self.game_state_lock:
+            return self.local_game_state
 
     """ Connect to the socket and start a connection thread """
     def connect(self):
@@ -188,8 +195,6 @@ class MinecraftServer(Connection):
 
             (connection, address) = self.socket.accept()
 
-            # Replace the server socket with the client's socket
-            # Maybe this is a bad idea because of race conditions
             self.initialize_socket(connection)
         except OSError:
             print("Failed to bind socket (race condition?), it's already on", flush=True)
