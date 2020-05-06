@@ -112,8 +112,10 @@ class MinecraftConnection(Connection):
         self.last_yaw = 0
         self.last_pitch = 0
 
-        self.gsReason = 0
-        self.gsValue = 0.0
+        self.gs_reason = 0
+        self.gs_value = 0.0
+
+        self.main_inventory = {}
 
         self.client_connection = None
         self.client_upstream = None

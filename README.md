@@ -66,7 +66,7 @@ optional arguments:
 # TODOs
 
 - handle `UpdateBlockEntity`
-- handle inventory/chunks
+- handle chunks and various mob entities
 - test out other versions (version support)
 - version number files, somehow? player shouldn't have to worry about versions messing up
 - TravisCLI integration with a test suite

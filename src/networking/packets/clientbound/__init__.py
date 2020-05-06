@@ -1,6 +1,6 @@
 from src.networking.packets.packet import Packet
 from src.networking.types import String, VarIntPrefixedByteArray, VarInt, Integer, VarIntArray, \
-    Long, Byte, Double, Float, Boolean, UUID
+    Long, Byte, Double, Float, Boolean, UUID, Short
 
 """
  Note: not using an OrderedDict for `definition` will break
@@ -45,6 +45,25 @@ class SetCompression(Packet):
     definition = {
         "Threshold": VarInt
     }
+
+
+class SetSlot(Packet):
+    id = 0x16
+    definition = {
+        "WindowID": None,
+        "Slot": None,
+        "SlotData": None,
+    }
+
+    # This packet changes a lot depending on the current protocol
+    # But only SlotData changes
+    # See https://wiki.vg/index.php?title=Slot_Data&oldid=7835 (1.12.2)
+    def read_fields(self, packet_buffer):
+        self.WindowID = Byte.read(packet_buffer)
+        self.Slot = Short.read(packet_buffer)
+
+        # The rest of the packet is SlotData which we don't need to parse
+
 
 
 class ChunkData(Packet):

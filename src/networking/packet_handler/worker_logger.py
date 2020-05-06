@@ -1,6 +1,7 @@
 from src.networking.packets.serverbound import KeepAlive as KeepAliveServerbound, TeleportConfirm
 from src.networking.packets.clientbound import ChunkData, UnloadChunk, SpawnEntity, \
-    DestroyEntities, KeepAlive, ChatMessage, PlayerPositionAndLook, TimeUpdate, HeldItemChange, GameState
+    DestroyEntities, KeepAlive, ChatMessage, PlayerPositionAndLook, TimeUpdate, \
+    HeldItemChange, GameState, SetSlot
 
 import threading
 
@@ -71,8 +72,11 @@ class WorkerLogger(threading.Thread):
             self.parent.connection.held_item_slot = HeldItemChange().read(packet.packet_buffer).Slot
         elif packet.id == GameState.id:
             gamestate = GameState().read(packet.packet_buffer)
-            self.parent.connection.gsReason = gamestate.Reason
-            self.parent.connection.gsValue = gamestate.Value
+            self.parent.connection.gs_reason = gamestate.Reason
+            self.parent.connection.gs_value = gamestate.Value
+        elif packet.id == SetSlot.id:
+            setslot = SetSlot().read(packet.packet_buffer)
+            self.parent.connection.main_inventory[setslot.Slot] = packet
 
     def run(self):
         while True:

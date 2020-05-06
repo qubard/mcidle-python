@@ -2,7 +2,7 @@ from src.networking.packet_handler import PacketHandler
 from src.networking.packets.serverbound import Handshake, LoginStart, EncryptionResponse, ClientStatus, \
     PlayerPositionAndLook, TeleportConfirm
 from src.networking.packets.clientbound import EncryptionRequest, SetCompression, SpawnEntity, ChunkData, \
-    TimeUpdate, HeldItemChange, PlayerListItem, GameState
+    TimeUpdate, HeldItemChange, PlayerListItem, GameState, SetSlot
 from src.networking.packets.clientbound import PlayerPositionAndLook as PlayerPositionAndLookClientbound
 
 from cryptography.hazmat.backends import default_backend
@@ -83,8 +83,12 @@ class LoginHandler(PacketHandler):
         self.mc_connection.send_packet_raw(ClientStatus(ActionID=0))
 
         # Send their current game state
-        self.connection.send_packet_raw(GameState(Reason=self.mc_connection.gsReason,\
-                                                    Value=self.mc_connection.gsValue))
+        self.connection.send_packet_raw(GameState(Reason=self.mc_connection.gs_reason,\
+                                                    Value=self.mc_connection.gs_value))
+
+        # Send their inventory
+        for slot in self.mc_connection.main_inventory:
+            self.connection.send_packet_buffer_raw(self.mc_connection.main_inventory[slot].compressed_buffer)
 
         # Send their last held item
         self.connection.send_packet_raw(HeldItemChange(Slot=self.mc_connection.held_item_slot))
