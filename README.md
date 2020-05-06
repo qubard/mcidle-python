@@ -3,8 +3,6 @@ An idling cli for minecraft which works by proxying your connection to a minecra
 
 It is particularly useful for servers which punish you for disconnecting (e.g `2b2t.org` which has queues)
 
-I recommend using two accounts: one to login with via mcidle, and one to connect to mcidle with locally to avoid invalidating your login sessions (see notes).
-
 Feel free to submit an issue if something doesn't work properly.
 
 # Supported Versions
