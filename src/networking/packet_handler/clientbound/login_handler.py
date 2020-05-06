@@ -22,76 +22,68 @@ class LoginHandler(PacketHandler):
         if packet.id != HeldItemChange.id:
             return
 
-        self.mc_connection.held_item_slot = HeldItemChange().read(packet.packet_buffer).Slot
+        self.mc_connection.game_state.held_item_slot = HeldItemChange().read(packet.packet_buffer).Slot
 
     def handle_position(self, packet):
         if packet.id != PlayerPositionAndLook.id:
             return
 
         pos_packet = PlayerPositionAndLook().read(packet.packet_buffer)
-        self.mc_connection.last_yaw = pos_packet.Yaw
-        self.mc_connection.last_pitch = pos_packet.Pitch
-        self.mc_connection.last_pos_packet = pos_packet
+        self.mc_connection.game_state.last_yaw = pos_packet.Yaw
+        self.mc_connection.game_state.last_pitch = pos_packet.Pitch
 
         # Replace the currently logged PlayerPositionAndLookClientbound packet
-        self.mc_connection.last_pos_packet = pos_packet
-
-    def send_packet_dict(self, id_, logger):
-        if id_ in logger.log:
-            packet_dict = logger.log[id_]
-            for packet in packet_dict.values():
-                self.connection.send_packet_buffer_raw(packet.compressed_buffer)
+        self.mc_connection.game_state.last_pos_packet = pos_packet
 
     def join_world(self):
         # Send the player all the packets that lets them join the world
-        for id_ in self.mc_connection.join_ids:
-            if id_ in self.mc_connection.packet_logger.log:
-                packet = self.mc_connection.packet_logger.log[id_]
+        for id_ in self.mc_connection.game_state.join_ids:
+            if id_ in self.mc_connection.game_state.packet_log:
+                packet = self.mc_connection.game_state.packet_log[id_]
                 self.connection.send_packet_buffer_raw(packet.compressed_buffer)
 
         # Send them their last position/look if it exists
-        if PlayerPositionAndLookClientbound.id in self.mc_connection.packet_logger.log:
-            if self.mc_connection and self.mc_connection.last_pos_packet:
-                last_packet = self.mc_connection.last_pos_packet
+        if PlayerPositionAndLookClientbound.id in self.mc_connection.game_state.packet_log:
+            if self.mc_connection and self.mc_connection.game_state.last_pos_packet:
+                last_packet = self.mc_connection.game_state.last_pos_packet
 
                 pos_packet = PlayerPositionAndLookClientbound( \
                     X=last_packet.X, Y=last_packet.Y, Z=last_packet.Z, \
-                    Yaw=self.mc_connection.last_yaw, Pitch=self.mc_connection.last_pitch, Flags=0, \
-                    TeleportID=self.connection.teleport_id)
-                self.connection.teleport_id += 1
+                    Yaw=self.mc_connection.game_state.last_yaw, Pitch=self.mc_connection.game_state.last_pitch, Flags=0, \
+                    TeleportID=self.mc_connection.game_state.teleport_id)
+                self.mc_connection.game_state.teleport_id += 1
                 self.connection.send_packet_raw(pos_packet)
             else:
                 self.connection.send_packet_buffer_raw(
-                    self.mc_connection.packet_logger.log[PlayerPositionAndLookClientbound.id] \
+                    self.mc_connection.game_state.packet_log[PlayerPositionAndLookClientbound.id] \
                         .compressed_buffer)  # Send the last packet that we got
 
-        if TimeUpdate.id in self.mc_connection.packet_logger.log:
-            self.connection.send_packet_buffer_raw(self.mc_connection.packet_logger.log[TimeUpdate.id].compressed_buffer)
+        if TimeUpdate.id in self.mc_connection.game_state.packet_log:
+            self.connection.send_packet_buffer_raw(self.mc_connection.game_state.packet_log\
+                                                       [TimeUpdate.id].compressed_buffer)
 
         # Send the player list items (to see other players)
-        self.send_packet_dict(PlayerListItem.id, self.mc_connection.packet_logger)
+        self.connection.send_single_packet_dict(self.mc_connection.game_state.player_list)
 
         # Send all loaded chunks
         print("Sending chunks", flush=True)
-        self.send_packet_dict(ChunkData.id, self.mc_connection.packet_logger)
+        self.connection.send_single_packet_dict(self.mc_connection.game_state.chunks)
         print("Done sending chunks", flush=True)
 
         # Send the player all the currently loaded entities
-        self.send_packet_dict(SpawnEntity.id, self.mc_connection.packet_logger)
+        self.connection.send_single_packet_dict(self.mc_connection.game_state.entities)
 
         # Player sends ClientStatus, this is important for respawning if died
         self.mc_connection.send_packet_raw(ClientStatus(ActionID=0))
 
         # Send their current game state
-        self.connection.send_packet_raw(GameState(Reason=self.mc_connection.gs_reason,\
-                                                    Value=self.mc_connection.gs_value))
-
+        self.connection.send_packet_raw(GameState(Reason=self.mc_connection.game_state.gs_reason,\
+                                                    Value=self.mc_connection.game_state.gs_value))
         # Send their inventory
-        for slot in self.mc_connection.main_inventory:
-            self.connection.send_packet_buffer_raw(self.mc_connection.main_inventory[slot].compressed_buffer)
+        self.connection.send_single_packet_dict(self.mc_connection.game_state.main_inventory)
 
         # Send their last held item
-        self.connection.send_packet_raw(HeldItemChange(Slot=self.mc_connection.held_item_slot))
+        self.connection.send_packet_raw(HeldItemChange(Slot=self.mc_connection.game_state.held_item_slot))
 
     def setup(self):
         print("Reading handshake", flush=True)

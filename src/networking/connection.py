@@ -6,9 +6,11 @@ from src.networking.encryption import *
 from src.networking.packet_handler.serverbound import LoginHandler as ServerboundLoginHandler
 from src.networking.packet_handler.clientbound import LoginHandler as ClientboundLoginHandler
 
-from src.networking.packet_handler import PacketLogger
+from src.networking.packet_handler import PacketLogger, PacketProcessor
 
 from src.networking.upstream import UpstreamThread
+
+from src.networking.game_state import GameState
 
 
 class Connection(threading.Thread):
@@ -84,6 +86,16 @@ class Connection(threading.Thread):
     def send_packet_buffer(self, packet_buffer):
         self.upstream.put(packet_buffer.bytes)
 
+    def send_packet_dict(self, id_, m):
+        if id_ in m:
+            packet_dict = m[id_]
+            for packet in packet_dict.values():
+                self.send_packet_buffer_raw(packet.compressed_buffer)
+
+    def send_single_packet_dict(self, m):
+        for packet in m.values():
+            self.send_packet_buffer_raw(packet.compressed_buffer)
+
     def run(self):
         self.initialize_connection()
         if self.packet_handler is not None:
@@ -107,15 +119,11 @@ class MinecraftConnection(Connection):
         self.server = None
         self.server_port = server_port
 
-        self.held_item_slot = 0
-        self.last_pos_packet = None
-        self.last_yaw = 0
-        self.last_pitch = 0
+        # JoinGame, ServerDifficulty, SpawnPosition, PlayerAbilities, Respawn
+        join_ids = [0x23, 0x0D, 0x46, 0x2C, 0x35]
+        self.game_state = GameState(join_ids)
 
-        self.gs_reason = 0
-        self.gs_value = 0.0
-
-        self.main_inventory = {}
+        self.packet_processor = PacketProcessor(self.game_state)
 
         self.client_connection = None
         self.client_upstream = None
@@ -127,8 +135,6 @@ class MinecraftConnection(Connection):
 
         self.packet_handler = ServerboundLoginHandler(self)
 
-        """ JoinGame, ServerDifficulty, SpawnPosition, PlayerAbilities, Respawn """
-        self.join_ids = [0x23, 0x0D, 0x46, 0x2C, 0x35]
 
         # Initialize the chunk logger/generic packet logger and run them
         self.packet_logger = PacketLogger(self)
@@ -164,7 +170,6 @@ class MinecraftServer(Connection):
         super().__init__('localhost', port, upstream)
         self.mc_connection = mc_connection
         self.packet_handler = ClientboundLoginHandler(self, mc_connection)
-        self.teleport_id = 2 # TODO: remove this and use a state wrapper
 
     def on_disconnect(self):
         print("Called MinecraftServer::on_disconnect()...", flush=True)
