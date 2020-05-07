@@ -82,7 +82,7 @@ class MultiBlockChange(Packet):
         self.Records = []
         while count > 0:
             pos = UnsignedByte.read(packet_buffer)
-            pos_x = pos & 0xF0
+            pos_x = (pos & 0xF0) >> 4
             pos_z = pos & 0x0F
 
             y_coord = UnsignedByte.read(packet_buffer)
@@ -91,11 +91,12 @@ class MultiBlockChange(Packet):
             block_type = id >> 4
             block_meta = id & 15
 
-            coords = (pos_x * 16, y_coord * 16, pos_z * 16)
+            coords = (self.ChunkX * 16 + pos_x, y_coord, self.ChunkZ * 16 + pos_z)
 
             self.Records.append((coords, block_type, block_meta))
             print("Coords", coords, "Type", block_type, "Meta", block_meta, flush=True)
             count = count - 1
+
 
 class ChunkData(Packet):
     id = 0x20
