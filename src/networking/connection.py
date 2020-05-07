@@ -228,6 +228,9 @@ class MinecraftServer(Connection):
 
     def stop(self):
         self.running = False
+        # Bugfix: Makes sure listen_thread does not have a server
+        # So it accepts a new client forcefully
+        self.listen_thread.set_server(None)
         super().stop()
         self.anti_afk.stop()
 
