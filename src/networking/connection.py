@@ -202,8 +202,11 @@ class MinecraftServer(Connection):
 
         self.running = True
         self.start_lock = RLock()
+
         # Every second send an animation swing to prevent AFK kicks while client_upstream is DCed
         self.anti_afk = AntiAFKThread(self.upstream, self.mc_connection)
+        self.anti_afk.start()
+
         self.listen_thread = listen_thread.set_server(self)
 
     # Note that when mcidle terminates first MinecraftConnection does
@@ -213,7 +216,7 @@ class MinecraftServer(Connection):
         # Only re-create the server if we're still connected to our target server
         if self.mc_connection and self.mc_connection.upstream.connected():
             super().on_disconnect()
-            # Start listening for a client again
+            # Replace our server object to restart the MinecraftServer state easily
             self.mc_connection.start_server()
 
     def start(self, connection):
@@ -222,7 +225,6 @@ class MinecraftServer(Connection):
                 print("Starting MinecraftServer!", flush=True)
                 self.initialize_socket(connection)
                 super().start() # Runs initialize_connection
-                self.anti_afk.start()
 
     def stop(self):
         self.running = False
