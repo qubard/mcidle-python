@@ -32,6 +32,13 @@ class HeldItemChange(Packet):
     }
 
 
+class Animation(Packet):
+    id = 0x1D
+    definition = {
+        "Hand": VarInt
+    }
+
+
 class PlayerAbilities(Packet):
     id = 0x13
     definition = {
@@ -39,6 +46,7 @@ class PlayerAbilities(Packet):
         "FlyingSpeed": Float,
         "WalkingSpeed": Float,
     }
+
 
 class LoginStart(Packet):
     id = 0x00

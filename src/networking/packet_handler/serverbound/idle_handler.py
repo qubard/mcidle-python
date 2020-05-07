@@ -1,5 +1,5 @@
 from src.networking.packet_handler import PacketHandler
-from src.networking.packets.clientbound import PlayerListItem, KeepAlive, ChunkData
+from src.networking.packets.clientbound import KeepAlive
 
 import select
 
@@ -7,7 +7,7 @@ import select
 class IdleHandler(PacketHandler):
     # Idling occurs when we've disconnected our client or have yet to connect
     def handle(self):
-        while self.connection.running:
+        while self.running:
             try:
                 # Read a packet from the target server
                 ready_to_read = select.select([self.connection.stream], [], [], self._timeout)[0]
@@ -25,7 +25,8 @@ class IdleHandler(PacketHandler):
                         if packet.id != KeepAlive.id:
                             self.connection.put_upstream(packet)
                     else:
-                        print("Received invalid packet", flush=True)
+                        raise EOFError()
             except EOFError:
                 print("Disconnected from server, closing", flush=True)
+                self.connection.on_disconnect()
                 break

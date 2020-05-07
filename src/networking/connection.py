@@ -9,7 +9,7 @@ from src.networking.packet_handler.clientbound import LoginHandler as Clientboun
 from src.networking.packet_handler import WorkerProcessor, ClientboundProcessor
 
 from src.networking.upstream import UpstreamThread
-
+from src.networking.anti_afk import AntiAFKThread
 from src.networking.game_state import GameState
 
 
@@ -19,7 +19,6 @@ class Connection(threading.Thread):
         self.threshold = None
         self.address = (ip, port)
         self.packet_handler = None
-        self.running = False
 
         self.socket = None
         self.stream = None
@@ -68,7 +67,6 @@ class Connection(threading.Thread):
     # We need this to stop reading packets from the dead stream
     # which halts the wait thread
     def on_disconnect(self):
-        self.running = False
         self.destroy_socket()
 
     def send_packet_buffer_raw(self, packet_buffer):
@@ -97,7 +95,6 @@ class Connection(threading.Thread):
         self.initialize_connection()
         if self.packet_handler is not None:
             if self.packet_handler.setup():
-                self.running = True
                 self.packet_handler.on_setup() # Could possibly change the packet handler
                 
                 if self.packet_handler.next_handler() is not None \
@@ -161,6 +158,14 @@ class MinecraftConnection(Connection):
         print("Called MinecraftConnection::on_disconnect()...", flush=True)
         super().on_disconnect()
 
+        # Terminate all existing threads
+        self.packet_handler.stop()
+        self.worker_processor.stop()
+
+        if self.server is not None:
+            self.server.upstream.stop()
+            self.server.packet_handler.stop()
+
     def initialize_connection(self):
         self.connect()
         # Should we wait here or is this blocking?
@@ -182,6 +187,10 @@ class MinecraftServer(Connection):
         super().__init__('localhost', port, upstream)
         self.mc_connection = mc_connection
         self.packet_handler = ClientboundLoginHandler(self, mc_connection)
+
+        # Every second send an animation swing to prevent AFK kicks while client_upstream is DCed
+        self.anti_afk = AntiAFKThread(self.upstream, self.mc_connection)
+        self.anti_afk.start()
 
     def on_disconnect(self):
         print("Called MinecraftServer::on_disconnect()...", flush=True)

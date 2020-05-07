@@ -10,6 +10,7 @@ class PacketHandler:
     """ Generic packet handler responsible for processing incoming packets """
     def __init__(self, connection):
         self.connection = connection
+        self.running = True
         self.nextHandler = None
 
     """ Setup the packet handler
@@ -25,6 +26,12 @@ class PacketHandler:
     """ Default behaviour is to consume packets """
     def handle(self):
         pass
+
+    def stop(self):
+        self.running = False
+
+    def is_running(self):
+        return self.running
 
     def next_handler(self):
         return self.nextHandler

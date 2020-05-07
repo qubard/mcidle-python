@@ -15,6 +15,10 @@ class UpstreamThread(threading.Thread):
         with self.socket_lock:
             self.socket = socket
 
+    def connected(self):
+        with self.socket_lock:
+            return self.socket is not None
+
     def put(self, b):
         self.queue.put(b)
 

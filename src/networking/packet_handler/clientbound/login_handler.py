@@ -118,9 +118,17 @@ class LoginHandler(PacketHandler):
 
     def setup(self):
         print("Reading handshake", flush=True)
-        Handshake().read(self.read_packet_from_stream().packet_buffer)
+
+        pkt = self.read_packet_from_stream()
+        if pkt is None:
+            return False
+        Handshake().read(pkt.packet_buffer)
+
         print("Reading login start", flush=True)
-        LoginStart().read(self.read_packet_from_stream().packet_buffer)
+        pkt = self.read_packet_from_stream()
+        if pkt is None:
+            return False
+        LoginStart().read(pkt.packet_buffer)
 
         # Generate a dummy (pubkey, privkey) pair
         privkey = rsa.generate_private_key(public_exponent=65537, key_size=2048, backend=default_backend())
@@ -138,7 +146,7 @@ class LoginHandler(PacketHandler):
         _ = self.read_packet_from_stream()
 
         if _ is None:
-            print("Invalid packet!", flush=True)
+            print("Invalid encryption response!", flush=True)
             self.connection.on_disconnect()
             return False
 
@@ -174,7 +182,7 @@ class LoginHandler(PacketHandler):
         return True
 
     def handle(self):
-        while True:
+        while self.running:
             ready_to_read = select.select([self.connection.stream], [], [], self._timeout)[0]
 
             if ready_to_read:
