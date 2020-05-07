@@ -23,6 +23,7 @@ class Connection(threading.Thread):
         self.socket = None
         self.stream = None
 
+        self.upstream_lock = RLock()
         self.upstream = UpstreamThread()
 
         self.compression_threshold = None
@@ -32,20 +33,27 @@ class Connection(threading.Thread):
     def stop(self):
         if self.packet_handler:
             self.packet_handler.stop()
-        self.upstream.stop()
+
+        with self.upstream_lock:
+            if self.upstream:
+                self.upstream.stop()
 
     def initialize_socket(self, sock):
         self.socket = sock
         """ Create a read only blocking file interface (stream) for the socket """
         self.stream = self.socket.makefile('rb')
-        self.upstream.set_socket(self.socket)
+        with self.upstream_lock:
+            if self.upstream:
+                self.upstream.set_socket(self.socket)
 
     def destroy_socket(self):
         try:
             self.socket.close()
             self.socket = None
             self.stream = None
-            self.upstream.set_socket(None)
+            with self.upstream_lock:
+                if self.upstream:
+                    self.upstream.set_socket(None)
             print("Socket shutdown and closed.", flush=True)
         except OSError:
             print("Failed to reset socket", flush=True)
@@ -60,7 +68,9 @@ class Connection(threading.Thread):
         # Replace the socket used with an encrypted socket
         self.socket = EncryptedSocketWrapper(self.socket, encryptor, decryptor)
         print("Set upstream socket", flush=True)
-        self.upstream.set_socket(self.socket)
+        with self.upstream_lock:
+            if self.upstream:
+                self.upstream.set_socket(self.socket)
         self.stream = EncryptedFileObjectWrapper(self.stream, decryptor)
 
     def initialize_connection(self):
@@ -78,10 +88,14 @@ class Connection(threading.Thread):
         self.socket.send(packet.write(self.compression_threshold).bytes)
 
     def send_packet(self, packet):
-        self.upstream.put(packet.write(self.compression_threshold).bytes)
+        with self.upstream_lock:
+            if self.upstream:
+                self.upstream.put(packet.write(self.compression_threshold).bytes)
 
     def send_packet_buffer(self, packet_buffer):
-        self.upstream.put(packet_buffer.bytes)
+        with self.upstream_lock:
+            if self.upstream:
+                self.upstream.put(packet_buffer.bytes)
 
     def send_packet_dict(self, id_, m):
         if id_ in m:
