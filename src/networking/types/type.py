@@ -264,6 +264,30 @@ class UUID(Type):
         return stream.write(uuid.UUID(value).bytes)
 
 
+class ChunkSection(Type):
+
+    @staticmethod
+    def read(stream):
+        bits_per_block = UnsignedByte.read(stream)
+        palette = Palette.read
+        data_len = VarInt.read(stream)
+        data = []
+        num_read = 0
+        while num_read < data_len:
+            Long.read(stream)
+            num_read = num_read + 1
+
+        block_light = VarIntPrefixedByteArray.read(stream)
+
+        # If there's still data we have sky light
+        # Assumes our stream is a packet buffer, not sure if I like this
+        print("We have skylight", stream.remaining())
+        if stream.remaining() > 0:
+            sky_light = VarIntPrefixedByteArray.read(stream)
+
+        pass
+
+
 class Position(Type, Vector):
     """3D position vectors with a specific, compact network representation."""
     __slots__ = ()

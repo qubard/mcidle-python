@@ -18,6 +18,9 @@ class PacketBuffer:
     def reset_cursor(self):
         self.bytes_.seek(0)
 
+    def remaining(self):
+        return len(self) - self.bytes_.tell()
+
     def __len__(self):
         return len(self.bytes)
 

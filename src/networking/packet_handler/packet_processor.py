@@ -1,7 +1,7 @@
 from src.networking.packets.serverbound import KeepAlive as KeepAliveServerbound, TeleportConfirm
 from src.networking.packets.clientbound import ChunkData, UnloadChunk, SpawnEntity, \
     DestroyEntities, KeepAlive, ChatMessage, PlayerPositionAndLook, TimeUpdate, \
-    HeldItemChange, SetSlot, PlayerListItem, PlayerAbilities
+    HeldItemChange, SetSlot, PlayerListItem, PlayerAbilities, MultiBlockChange
 
 from src.networking.packets.clientbound import GameState as GameStateP
 
@@ -106,5 +106,8 @@ class ClientboundProcessor(PacketProcessor):
                 self.player_list(packet)
             elif packet.id == PlayerAbilities.id:
                 self.game_state.abilities = PlayerAbilities().read(packet.packet_buffer)
+            elif packet.id == MultiBlockChange.id:
+                p = MultiBlockChange().read(packet.packet_buffer)
+                print("Got multichange pkt", p, flush=True)
 
         return None

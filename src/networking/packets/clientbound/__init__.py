@@ -1,6 +1,6 @@
 from src.networking.packets.packet import Packet
 from src.networking.types import String, VarIntPrefixedByteArray, VarInt, Integer, VarIntArray, \
-    Long, Byte, Double, Float, Boolean, UUID, Short
+    Long, Byte, Double, Float, Boolean, UUID, Short, ChunkSection, UnsignedByte
 
 """
  Note: not using an OrderedDict for `definition` will break
@@ -64,7 +64,38 @@ class SetSlot(Packet):
 
         # The rest of the packet is SlotData which we don't need to parse
 
+class MultiBlockChange(Packet):
+    id = 0x10
+    definition = {
+        "ChunkX": Integer,
+        "ChunkZ": Integer,
+        "RecordCount": VarInt,
+        "Records": [],
+    }
 
+    def read_fields(self, packet_buffer):
+        self.ChunkX = Integer.read(packet_buffer)
+        self.ChunkZ = Integer.read(packet_buffer)
+        self.RecordCount = VarInt.read(packet_buffer)
+
+        count = self.RecordCount
+        self.Records = []
+        while count > 0:
+            pos = UnsignedByte.read(packet_buffer)
+            pos_x = pos & 0xF0
+            pos_z = pos & 0x0F
+
+            y_coord = UnsignedByte.read(packet_buffer)
+
+            id = VarInt.read(packet_buffer)
+            block_type = id >> 4
+            block_meta = id & 15
+
+            coords = (pos_x * 16, y_coord * 16, pos_z * 16)
+
+            self.Records.append((coords, block_type, block_meta))
+            print("Coords", coords, "Type", block_type, "Meta", block_meta, flush=True)
+            count = count - 1
 
 class ChunkData(Packet):
     id = 0x20
@@ -78,9 +109,30 @@ class ChunkData(Packet):
         self.ChunkZ = Integer.read(packet_buffer)
         self.GroundUpContinuous = Boolean.read(packet_buffer)
         self.PrimaryBitMask = VarInt.read(packet_buffer)
+        mask = self.PrimaryBitMask
+
+        self.NumSections = 0
+
+        """
+        # Count the # of bits set
+        while mask > 0:
+            if mask % 2 == 1:
+                self.NumSections = self.NumSections + 1
+            mask /= 2
+
         self.Data = VarIntPrefixedByteArray.read(packet_buffer)
 
+        # Read the data array
+        # Ref: https://wiki.vg/index.php?title=Chunk_Format&oldid=14135#Data_structure
+        sections = []
+        readSections = 0
+        while readSections < self.NumSections:
+            section = ChunkSection.read(packet_buffer)
+            readSections = readSections + 1
+
         self.NumBlockEnts = VarInt.read(packet_buffer)
+        """
+
 
 
 

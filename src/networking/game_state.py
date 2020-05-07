@@ -7,6 +7,8 @@ class GameState:
         self.last_pos_packet = None
         self.last_yaw = 0
         self.last_pitch = 0
+
+        # Teleport id is incremented for each teleport by default
         self.teleport_id = 0
 
         self.gs_reason = 0
