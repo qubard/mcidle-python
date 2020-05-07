@@ -9,7 +9,7 @@ class UpstreamThread(threading.Thread):
         self.queue = Queue()
         self.socket = None
         self.socket_lock = threading.RLock()
-        self.running = False
+        self.running = True
 
     def set_socket(self, socket):
         with self.socket_lock:
@@ -22,14 +22,8 @@ class UpstreamThread(threading.Thread):
     def put(self, b):
         self.queue.put(b)
 
-    def start(self):
-        self.running = True
-        super().start()
-
-    def started(self):
-        return self.running
-
     def stop(self):
+        self.set_socket(None)
         self.running = False
 
     def run(self):

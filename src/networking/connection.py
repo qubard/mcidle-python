@@ -14,7 +14,7 @@ from src.networking.game_state import GameState
 
 
 class Connection(threading.Thread):
-    def __init__(self, ip=None, port=None, upstream=None):
+    def __init__(self, ip=None, port=None):
         threading.Thread.__init__(self)
         self.threshold = None
         self.address = (ip, port)
@@ -23,14 +23,16 @@ class Connection(threading.Thread):
         self.socket = None
         self.stream = None
 
-        if upstream is None:
-            self.upstream = UpstreamThread()
-        else:
-            self.upstream = upstream
+        self.upstream = UpstreamThread()
 
         self.compression_threshold = None
 
         self.initialize_socket(socket.socket())
+
+    def stop(self):
+        if self.packet_handler:
+            self.packet_handler.stop()
+        self.upstream.stop()
 
     def initialize_socket(self, sock):
         self.socket = sock
@@ -62,7 +64,7 @@ class Connection(threading.Thread):
         self.stream = EncryptedFileObjectWrapper(self.stream, decryptor)
 
     def initialize_connection(self):
-        pass
+        return True
 
     # We need this to stop reading packets from the dead stream
     # which halts the wait thread
@@ -91,27 +93,35 @@ class Connection(threading.Thread):
         for packet in m.values():
             self.send_packet_buffer_raw(packet.compressed_buffer)
 
-    def run(self):
-        self.initialize_connection()
+    def run_handler(self):
+        if not self.initialize_connection():
+            print("Failed to run_handler!", flush=True)
+            return
+
         if self.packet_handler is not None:
             if self.packet_handler.setup():
-                self.packet_handler.on_setup() # Could possibly change the packet handler
-                
+                self.packet_handler.on_setup()  # Could possibly change the packet handler
+
                 if self.packet_handler.next_handler() is not None \
                         and self.packet_handler.next_handler() != self.packet_handler:
                     self.packet_handler = self.packet_handler.next_handler()
-                
+
                 self.packet_handler.handle()
+
+    def run(self):
+        self.run_handler()
+
 
 # Assume that a MinecraftConnection has to stay active at all times
 class MinecraftConnection(Connection):
-    def __init__(self, username, ip, protocol, port=25565, server_port=1001, profile=None):
+    def __init__(self, username, ip, protocol, port=25565, server_port=1001, profile=None, listen_thread=None):
         super().__init__(ip, port)
 
         self.username = username
         self.protocol = protocol
         self.server = None
         self.server_port = server_port
+        self.listen_thread = listen_thread
 
         # JoinGame, ServerDifficulty, SpawnPosition, Respawn
         join_ids = [0x23, 0x0D, 0x46, 0x35]
@@ -133,7 +143,6 @@ class MinecraftConnection(Connection):
 
         # Process packets in another thread
         self.worker_processor = WorkerProcessor(self, self.packet_processor)
-        self.worker_processor.start()
 
     @property
     def client_upstream(self):
@@ -151,64 +160,103 @@ class MinecraftConnection(Connection):
 
     """ Connect to the socket and start a connection thread """
     def connect(self):
-        self.socket.connect(self.address)
-        print("Connected MinecraftConnection", flush=True)
-        
+        try:
+            self.socket.connect(self.address)
+            self.worker_processor.start()
+            print("Connected MinecraftConnection", flush=True)
+            return True
+        except ConnectionRefusedError:
+            return False
+
+    def stop(self):
+        super().stop()
+        self.worker_processor.stop()
+
     def on_disconnect(self):
         print("Called MinecraftConnection::on_disconnect()...", flush=True)
         super().on_disconnect()
 
         # Terminate all existing threads
-        self.packet_handler.stop()
-        self.worker_processor.stop()
+        self.stop()
 
+        # Terminate the server threads if there is one
         if self.server is not None:
-            self.server.upstream.stop()
-            self.server.packet_handler.stop()
+            self.server.stop()
 
     def initialize_connection(self):
-        self.connect()
-        # Should we wait here or is this blocking?
-        self.start_server()
+        if self.connect():
+            self.start_server()
+            return True
+        return False
 
     def start_server(self):
-        # Override the old server interface
-        # And stop the old thread
-        if self.server is not None:
-            self.server.upstream.stop()
+        self.server = MinecraftServer(self, self.server_port, self.listen_thread)
 
-        self.server = MinecraftServer(self, self.server_port)
-        self.server.start() # Start main thread
-        
 
 class MinecraftServer(Connection):
     """ Used for listening on a port for a connection """
-    def __init__(self, mc_connection, port=25565, upstream=None):
-        super().__init__('localhost', port, upstream)
+    def __init__(self, mc_connection, port=25565, listen_thread=None):
+        super().__init__('localhost', port)
         self.mc_connection = mc_connection
         self.packet_handler = ClientboundLoginHandler(self, mc_connection)
 
+        self.running = True
+        self.start_lock = RLock()
         # Every second send an animation swing to prevent AFK kicks while client_upstream is DCed
         self.anti_afk = AntiAFKThread(self.upstream, self.mc_connection)
-        self.anti_afk.start()
+        self.listen_thread = listen_thread.set_server(self)
 
+    # Note that when mcidle terminates first MinecraftConnection does
     def on_disconnect(self):
         print("Called MinecraftServer::on_disconnect()...", flush=True)
-        super().on_disconnect()
-        if self.mc_connection:
+        self.stop()
+        # Only re-create the server if we're still connected to our target server
+        if self.mc_connection and self.mc_connection.upstream.connected():
+            super().on_disconnect()
             # Start listening for a client again
             self.mc_connection.start_server()
-            
-    """ Bind to a socket and wait for a client to connect """
-    def initialize_connection(self):
-        try:
-            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-            self.socket.bind(self.address)
-            print("Waiting for client", flush=True)
-            self.socket.listen(1) # Listen for 1 incoming connection
 
-            (connection, address) = self.socket.accept()
+    def start(self, connection):
+        with self.start_lock:
+            if self.mc_connection.upstream.connected():
+                print("Starting MinecraftServer!", flush=True)
+                self.initialize_socket(connection)
+                super().start() # Runs initialize_connection
+                self.anti_afk.start()
 
-            self.initialize_socket(connection)
-        except OSError:
-            print("Failed to bind socket (race condition?), it's already on", flush=True)
+    def stop(self):
+        self.running = False
+        super().stop()
+        self.anti_afk.stop()
+
+
+class ListenThread(threading.Thread):
+
+    def __init__(self, address):
+        self.address = address
+        threading.Thread.__init__(self)
+        self.socket = socket.socket()
+        self.server = None
+        self.server_lock = RLock()
+        self.running = True
+
+    def set_server(self, server):
+        with self.server_lock:
+            self.server = server
+            return self
+
+    def run(self):
+        self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        self.socket.bind(self.address)
+        self.socket.listen(1)  # Listen for 1 incoming connection
+
+        while self.running:
+            try:
+                (connection, address) = self.socket.accept()
+                print("Client connected", flush=True)
+
+                with self.server_lock:
+                    if self.server:
+                        self.server.start(connection)
+            except OSError:
+                print("Failed to bind socket (race condition?), it's already on", flush=True)

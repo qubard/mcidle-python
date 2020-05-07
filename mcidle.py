@@ -1,4 +1,4 @@
-from src.networking.connection import MinecraftConnection, MinecraftServer
+from src.networking.connection import MinecraftConnection, ListenThread
 from src.networking.auth import Auth
 
 import argparse
@@ -35,12 +35,24 @@ def init():
     else:
         print("Credentials are valid!")
 
+    args.ip = "localhost"
     if args.ip is None:
         raise RuntimeError("Please specify an ip address!")
 
-    # TODO: Wrap this in a cohesive interface that can manage connections
-    conn = MinecraftConnection(ip=args.ip, port=args.port, server_port=args.dport, protocol=args.protocol, username=credentials['selectedProfile']['name'], profile=credentials)
-    conn.start()
+    # We use this to listen for incoming connections
+    listen_thread = ListenThread(address=('localhost', args.dport))
+    listen_thread.start()
+
+    import time
+    while True:
+        listen_thread.set_server(None)
+        conn = MinecraftConnection(ip=args.ip, port=args.port, server_port=args.dport, protocol=args.protocol, \
+                                   username=credentials['selectedProfile']['name'], profile=credentials, \
+                                   listen_thread=listen_thread)
+        conn.run_handler()
+        print("Disconnected..reconnecting in 5 seconds")
+        time.sleep(5)
+        print("Reconnecting..", flush=True)
 
 if __name__ == '__main__':
     init()
