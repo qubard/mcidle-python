@@ -35,7 +35,6 @@ def init():
     else:
         print("Credentials are valid!")
 
-    args.ip = "localhost"
     if args.ip is None:
         raise RuntimeError("Please specify an ip address!")
 
