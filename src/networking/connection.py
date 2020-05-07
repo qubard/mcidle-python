@@ -204,7 +204,7 @@ class MinecraftServer(Connection):
         self.start_lock = RLock()
 
         # Every second send an animation swing to prevent AFK kicks while client_upstream is DCed
-        self.anti_afk = AntiAFKThread(self.upstream, self.mc_connection)
+        self.anti_afk = AntiAFKThread(self.mc_connection)
         self.anti_afk.start()
 
         self.listen_thread = listen_thread.set_server(self)
