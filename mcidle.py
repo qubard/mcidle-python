@@ -1,4 +1,5 @@
-from src.networking.connection import MinecraftConnection, ListenThread
+from src.networking.connection import MinecraftConnection
+from src.networking.listen_thread import ListenThread
 from src.networking.auth import Auth
 
 import argparse

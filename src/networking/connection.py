@@ -223,8 +223,10 @@ class MinecraftServer(Connection):
         with self.start_lock:
             if self.mc_connection.upstream.connected():
                 print("Starting MinecraftServer!", flush=True)
+                # Sets our upstream to the client connection
                 self.initialize_socket(connection)
-                super().start() # Runs initialize_connection
+                # Runs initialize_connection and the main packet handler in a separate thread
+                super().start()
 
     def stop(self):
         self.running = False
@@ -233,35 +235,3 @@ class MinecraftServer(Connection):
         self.listen_thread.set_server(None)
         super().stop()
         self.anti_afk.stop()
-
-
-class ListenThread(threading.Thread):
-
-    def __init__(self, address):
-        self.address = address
-        threading.Thread.__init__(self)
-        self.socket = socket.socket()
-        self.server = None
-        self.server_lock = RLock()
-        self.running = True
-
-    def set_server(self, server):
-        with self.server_lock:
-            self.server = server
-            return self
-
-    def run(self):
-        self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        self.socket.bind(self.address)
-        self.socket.listen(1)  # Listen for 1 incoming connection
-
-        while self.running:
-            try:
-                (connection, address) = self.socket.accept()
-                print("Client connected", flush=True)
-
-                with self.server_lock:
-                    if self.server:
-                        self.server.start(connection)
-            except OSError:
-                print("Failed to bind socket (race condition?), it's already on", flush=True)
