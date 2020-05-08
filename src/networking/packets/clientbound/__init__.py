@@ -1,6 +1,6 @@
 from src.networking.packets.packet import Packet
 from src.networking.types import String, VarIntPrefixedByteArray, VarInt, Integer, VarIntArray, \
-    Long, Byte, Double, Float, Boolean, UUID, Short, ChunkSection, UnsignedByte
+    Long, Byte, Double, Float, Boolean, UUID, Short, ChunkSection, UnsignedByte, ByteArray
 
 """
  Note: not using an OrderedDict for `definition` will break
@@ -102,7 +102,8 @@ class ChunkData(Packet):
     id = 0x20
     definition = {
         "ChunkX": Integer,
-        "ChunkZ": Integer
+        "ChunkZ": Integer,
+        "NumSections": Integer,
     }
 
     def read_fields(self, packet_buffer):
@@ -112,29 +113,28 @@ class ChunkData(Packet):
         self.PrimaryBitMask = VarInt.read(packet_buffer)
         mask = self.PrimaryBitMask
 
-        self.NumSections = 0
+        #self.NumSections = 0
 
-        """
         # Count the # of bits set
-        while mask > 0:
-            if mask % 2 == 1:
-                self.NumSections = self.NumSections + 1
-            mask /= 2
+        #while mask > 0:
+        #    self.NumSections += mask & 1
+        #    mask >>= 1
 
-        self.Data = VarIntPrefixedByteArray.read(packet_buffer)
+        #self.Data = VarIntPrefixedByteArray.read(packet_buffer)
 
+        #self.DataLen = VarInt.read(packet_buffer)
         # Read the data array
         # Ref: https://wiki.vg/index.php?title=Chunk_Format&oldid=14135#Data_structure
         sections = []
-        readSections = 0
-        while readSections < self.NumSections:
-            section = ChunkSection.read(packet_buffer)
-            readSections = readSections + 1
+        #readSections = 0
+        #while readSections < self.NumSections:
+        #    ChunkSection.read(packet_buffer)
+        #    readSections = readSections + 1
 
-        self.NumBlockEnts = VarInt.read(packet_buffer)
-        """
+        #if self.GroundUpContinuous:
+        #    biomes = ByteArray.read(packet_buffer, 256)
 
-
+        #self.NumBlockEnts = VarInt.read(packet_buffer)
 
 
 class UnloadChunk(Packet):

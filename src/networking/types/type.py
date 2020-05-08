@@ -218,6 +218,12 @@ class ShortPrefixedByteArray(Type):
         return Short.write(len(value), stream) + stream.write(value)
 
 
+class ByteArray(Type):
+    @staticmethod
+    def read(stream, length):
+        return struct.unpack(str(length) + "s", stream.read(length))[0]
+
+
 class VarIntPrefixedByteArray(Type):
     @staticmethod
     def read(stream):
@@ -268,24 +274,62 @@ class ChunkSection(Type):
 
     @staticmethod
     def read(stream):
+        # In the latest protocol we have to read a short here (block count)
+        # block_count = Short.read(stream)
         bits_per_block = UnsignedByte.read(stream)
-        palette = Palette.read
+
+        palette_len = VarInt.read(stream)
+        if bits_per_block < 4:
+            # Indirect palette
+            bits_per_block = 4
+            # palette = [((p & 0xF0) >> 4, p & 0x0F) for p in palette]
+            #print("palette", palette, flush=True)
+        if bits_per_block > 8:
+            # Direct palette, ignore
+            bits_per_block = 13
+
+        if palette_len > 0:
+            while palette_len > 0:
+                VarInt.read(stream)
+                palette_len -= 1
+
+        mask = (1 << bits_per_block) - 1
+
         data_len = VarInt.read(stream)
         data = []
         num_read = 0
         while num_read < data_len:
-            Long.read(stream)
+            data.append(UnsignedLong.read(stream))
             num_read = num_read + 1
 
-        block_light = VarIntPrefixedByteArray.read(stream)
+        SECTION_HEIGHT = 16
+        SECTION_WIDTH = 16
+
+        for y in range(0, SECTION_HEIGHT):
+            for z in range(0, SECTION_WIDTH):
+                for x in range(0, SECTION_WIDTH):
+                    block_number = ((y * SECTION_HEIGHT) + z) * SECTION_WIDTH + x
+                    start_long = (block_number * bits_per_block) // 64
+                    start_offset = (block_number * bits_per_block) % 64
+                    end_long = ((block_number + 1) * bits_per_block - 1) // 64
+
+                    val = 0
+                    if start_long == end_long:
+                        val = data[start_long] >> start_offset
+                    else:
+                        end_offset = 64 - start_offset
+                        val = (data[start_long] >> start_offset) | (data[end_long] << end_offset)
+                    val &= mask
+
+
+                    #if palette:
+                    #    print(x,y,z, "Type", (palette[val] & 0xF0) >> 4, "Meta", (palette[val] & 0x0F), flush=True)
+
+        block_light = ByteArray.read(stream, 4096 // 2)
 
         # If there's still data we have sky light
         # Assumes our stream is a packet buffer, not sure if I like this
-        print("We have skylight", stream.remaining())
-        if stream.remaining() > 0:
-            sky_light = VarIntPrefixedByteArray.read(stream)
-
-        pass
+        sky_light = ByteArray.read(stream, 4096 // 2)
 
 
 class Position(Type, Vector):

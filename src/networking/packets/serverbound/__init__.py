@@ -1,6 +1,6 @@
 from src.networking.packets.packet import Packet
 from src.networking.types import String, Long, UnsignedShort, VarInt, VarIntPrefixedByteArray, \
-    Double, Float, Boolean, UnsignedByte, Short, Byte
+    Double, Float, Boolean, UnsignedByte, Short, Byte, Position
 
 """
  Note: not using an OrderedDict for `definition` will break
@@ -38,6 +38,14 @@ class Animation(Packet):
         "Hand": VarInt
     }
 
+
+class PlayerDigging(Packet):
+    id = 0x14
+    definition = {
+        "Status": VarInt,
+        "Location": Position,
+        "Face:": Byte,
+    }
 
 class PlayerAbilities(Packet):
     id = 0x13

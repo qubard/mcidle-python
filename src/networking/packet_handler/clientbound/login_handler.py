@@ -1,6 +1,6 @@
 from src.networking.packet_handler import PacketHandler
 from src.networking.packets.serverbound import Handshake, LoginStart, EncryptionResponse, ClientStatus, \
-    PlayerPositionAndLook, TeleportConfirm, HeldItemChange, PlayerAbilities
+    PlayerPositionAndLook, TeleportConfirm, HeldItemChange, PlayerAbilities, PlayerDigging
 from src.networking.packets.clientbound import EncryptionRequest, SetCompression, \
     TimeUpdate, GameState
 from src.networking.packets.clientbound import PlayerPositionAndLook as PlayerPositionAndLookClientbound
@@ -19,6 +19,13 @@ class LoginHandler(PacketHandler):
     def __init__(self, connection, mc_connection):
         super().__init__(connection)
         self.mc_connection = mc_connection
+
+    def handle_player_digging(self, packet):
+        if packet.id != PlayerDigging.id:
+            return
+
+        digging = PlayerDigging().read(packet.packet_buffer)
+        print(digging, flush=True)
 
     def handle_player_abilities(self, packet):
         if packet.id != PlayerAbilities.id:
@@ -193,6 +200,7 @@ class LoginHandler(PacketHandler):
                         self.handle_position(packet)
                         self.handle_held_item_change(packet)
                         self.handle_player_abilities(packet)
+                        self.handle_player_digging(packet)
                         self.mc_connection.send_packet_buffer(packet.compressed_buffer)
                 else:
                     print("Client disconnected (invalid packet). Exiting thread", flush=True)

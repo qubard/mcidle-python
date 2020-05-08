@@ -137,8 +137,8 @@ class MinecraftConnection(Connection):
         self.server_port = server_port
         self.listen_thread = listen_thread
 
-        # JoinGame, ServerDifficulty, SpawnPosition, Respawn
-        join_ids = [0x23, 0x0D, 0x46, 0x35]
+        # JoinGame, ServerDifficulty, SpawnPosition, Respawn, Experience, UpdateHealth
+        join_ids = [0x23, 0x0D, 0x46, 0x35, 0x40, 0x41]
         self.game_state = GameState(join_ids)
 
         self.packet_processor = ClientboundProcessor(self.game_state)

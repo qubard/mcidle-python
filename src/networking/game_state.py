@@ -26,6 +26,7 @@ class GameState:
         self.player_list = {}
         self.entities = {}
 
+        # Clientbound join ids
         self.join_ids = join_ids
 
     def acquire(self):

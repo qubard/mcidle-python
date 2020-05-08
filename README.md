@@ -66,6 +66,7 @@ optional arguments:
 # TODOs
 
 - keyboard interrupts
+- serverbound processor
 - handle `UpdateBlockEntity`
 - handle chunks and various mob entities
 - test out other versions (version support)
