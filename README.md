@@ -61,6 +61,10 @@ optional arguments:
 - Since Python is slow, reading from a buffer/passing chunks to be processed is slow which can halt the processing of KeepAlives which means that the player can disconnect randomly. The only real solution to this is dedicating a separate thread just to KeepAlives or converting this to C/C++. This would depend on how fast the server you run mcidle on is though, in practice on an Intel i7 8700k I did not have any issues in a single threaded setup.
 
 - In past versions we used multiple threads for worker loggers with Python's `multiprocessing` library, but this actually slowed down the program significantly due to the huge cost of acquiring a lock on dictionary objects so by default now we use 1 thread for packet processing and a synchronized queue to avoid heavy lock hits
+
+- On some windows installs (Windows 10) you may get a `missing Visual C++ 14.0` error while installing the pip
+  requirements. Install it
+  [here](https://www.microsoft.com/en-ca/download/details.aspx?id=48145).
 # TODOs
 
 - handle `UpdateBlockEntity`
