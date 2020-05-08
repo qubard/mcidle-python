@@ -41,7 +41,7 @@ def init():
         raise RuntimeError("Please specify an ip address!")
 
     # We use this to listen for incoming connections
-    listen_thread = ListenThread(address=('localhost', args.dport))
+    listen_thread = ListenThread(address=('', args.dport))
     listen_thread.start()
 
     # We do this loop because the session information may be invalidated at any point
