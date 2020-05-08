@@ -23,8 +23,7 @@ def update_credentials(username, password):
         auth = Auth()
         Auth.save_to_disk(auth.authenticate(username=username, password=password))
 
-
-def init():
+def try_auth(username, password):
     update_credentials(args.username, args.password)
 
     credentials = Auth.read_from_disk()
@@ -32,10 +31,12 @@ def init():
 
     if not auth.validate():
         Auth.delete_credentials()
-        raise RuntimeError("Invalid credentials!")
+        return None # Invalid credentials
     else:
-        print("Credentials are valid!")
-
+        print("Credentials are valid!", flush=True)
+    return credentials
+        
+def init():
     if args.ip is None:
         raise RuntimeError("Please specify an ip address!")
 
@@ -43,16 +44,27 @@ def init():
     listen_thread = ListenThread(address=('localhost', args.dport))
     listen_thread.start()
 
+    # We do this loop because the session information may be invalidated at any point
+    # Due to restarting the Minecraft client over and over
+    # So when we reconnect we need to generate potentially new credentials to avoid session errors
     import time
     while True:
-        listen_thread.set_server(None)
-        conn = MinecraftConnection(ip=args.ip, port=args.port, server_port=args.dport, protocol=args.protocol, \
-                                   username=credentials['selectedProfile']['name'], profile=credentials, \
-                                   listen_thread=listen_thread)
-        conn.run_handler()
-        print("Disconnected..reconnecting in 5 seconds")
-        time.sleep(5)
-        print("Reconnecting..", flush=True)
+        credentials = try_auth(args.username, args.password) # Make sure we can still auth
+        if credentials:
+            listen_thread.set_server(None)
+            conn = MinecraftConnection(ip=args.ip, port=args.port, server_port=args.dport, protocol=args.protocol, \
+                                       username=credentials['selectedProfile']['name'], profile=credentials, \
+                                       listen_thread=listen_thread)
+            conn.run_handler()
+            print("Disconnected..reconnecting in 5 seconds", flush=True)
+            time.sleep(5)
+            print("Reconnecting..", flush=True)
+        else:
+            if not args.username or not args.password:
+                print("Can't re-auth user because no user or password provided!", flush=True)
+                return
+            print("Trying to auth again", flush=True)
+            time.sleep(3)
 
 if __name__ == '__main__':
     init()
