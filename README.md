@@ -3,7 +3,8 @@ An idling cli for minecraft which works by proxying your connection to a minecra
 
 It is particularly useful for servers which punish you for disconnecting (e.g `2b2t.org` which has queues)
 
-Feel free to submit an issue if something doesn't work properly.
+Feel free to submit an issue if something doesn't work properly. I would like to point out that this has not been
+heavily tested so there will definitely be bugs.
 
 # Supported Versions
 
@@ -64,9 +65,16 @@ optional arguments:
 
 - On some windows installs (Windows 10) you may get a `missing Visual C++ 14.0` error while installing the pip
   requirements. Install it
-  [here](https://www.microsoft.com/en-ca/download/details.aspx?id=48145).
-# TODOs
+  [here](https://www.microsoft.com/en-ca/download/details.aspx?id=48145). If you can't build it still try installing the latest Visual Studio.
+  
+- `BrokenPipeError` occurs when `multiprocessing.Queue` can't flush data because it's been destroyed (doesn't seem to be a way to avoid this)
 
+- Placing a block or modifying the chunk you're in then reconnecting will not show the changes. This is because I did
+  not add the processing for chunk sections yet/digging packets (see the `experimental` branch, but Python is still too
+  slow to handle these things it seems). To solve this walk out of range of the chunks and then back in to force the
+  game to reload them
+# TODOs
+- Avoid destroying/recreating threads since it is very bug prone
 - handle `UpdateBlockEntity`
 - handle chunks and various mob entities
 - test out other versions (version support)
