@@ -194,6 +194,7 @@ class MinecraftConnection(Connection):
             print("Connected MinecraftConnection", flush=True)
             return True
         except ConnectionRefusedError:
+            print("Cannot connect to target server, connection refused!", flush=True)
             return False
 
     def stop(self):
