@@ -86,6 +86,7 @@ class ClientboundProcessor(PacketProcessor):
 
                 # Log the packet
                 self.game_state.packet_log[packet.id] = packet
+                self.game_state.received_position = True
 
                 # Send back a teleport confirm
                 return TeleportConfirm(TeleportID=pos_packet.TeleportID)

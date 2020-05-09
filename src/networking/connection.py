@@ -163,6 +163,10 @@ class MinecraftConnection(Connection):
 
         self.packet_handler = ServerboundLoginHandler(self)
 
+        # Every second send an animation swing to prevent AFK kicks while client_upstream is DCed
+        self.anti_afk = AntiAFKThread(self)
+        self.anti_afk.start()
+
         # Process packets in another thread
         self.worker_processor = WorkerProcessor(self, self.packet_processor)
 
@@ -194,6 +198,7 @@ class MinecraftConnection(Connection):
 
     def stop(self):
         super().stop()
+        self.anti_afk.stop()
         with self.client_upstream_lock:
             self.server_upstream.stop()
         self.worker_processor.stop()
@@ -229,10 +234,6 @@ class MinecraftServer(Connection):
 
         self.start_lock = threading.Lock()
 
-        # Every second send an animation swing to prevent AFK kicks while client_upstream is DCed
-        self.anti_afk = AntiAFKThread(self.mc_connection)
-        self.anti_afk.start()
-
         self.client_socket = None
 
         self.listen_thread = listen_thread.set_server(self)
@@ -251,6 +252,7 @@ class MinecraftServer(Connection):
             # Only re-create the server if we're still connected to our target server
             if self.mc_connection and self.mc_connection.upstream.connected():
                 self.destroy_socket()
+                self.mc_connection.set_client_upstream(None) # Client is no longer connected
                 # Replace our server object to restart the MinecraftServer state easily
                 # To be honest this is a bad pattern and it's better to just never kill MinecraftServer
                 # but then we'd have to overhaul how the packet handlers work since start() calls run()
@@ -275,4 +277,3 @@ class MinecraftServer(Connection):
         if self.packet_handler:
             self.packet_handler.stop()
 
-        self.anti_afk.stop()

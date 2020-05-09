@@ -16,6 +16,8 @@ class GameState:
 
         self.state_lock = RLock()
 
+        self.received_position = False
+
         # Every other packet goes here
         self.packet_log = {}
 
