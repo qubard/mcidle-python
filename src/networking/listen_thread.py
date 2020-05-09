@@ -24,10 +24,10 @@ class ListenThread(threading.Thread):
         while self.running:
             try:
                 (connection, address) = self.socket.accept()
-                print("Client connected", flush=True)
 
                 with self.server_lock:
                     if self.server:
+                        print("Client connected", flush=True)
                         self.server.start_with_socket(connection)
             except OSError:
                 print("Failed to bind socket (race condition?), it's already on", flush=True)

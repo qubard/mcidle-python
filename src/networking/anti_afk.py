@@ -17,5 +17,6 @@ class AntiAFKThread(threading.Thread):
     def run(self):
         while self.running:
             if self.connection.client_upstream and not self.connection.client_upstream.connected():
+                print("Sent AntiAFK packet", flush=True)
                 self.connection.send_packet(Animation(Hand=0))
             time.sleep(self.rate)
