@@ -71,6 +71,10 @@ optional arguments:
   not add the processing for chunk sections yet/digging packets (see the `experimental` branch, but Python is still too
   slow to handle these things it seems). To solve this walk out of range of the chunks and then back in to force the
   game to reload them
+  
+- Some servers use something like `TCP shield` which can detect if you're using a proxy (use wireshark to see the endpoint you connect to) which stops you from connecting.
+
+- If you run this on some VPS providers your ip range might be blocked and you won't be able to connect
 # TODOs
 - Avoid destroying/recreating threads since it is very bug prone
 - handle `UpdateBlockEntity`
