@@ -23,7 +23,7 @@ class IdleHandler(PacketHandler):
                         # so while we have a reference it can't be None
                         # Since client_upstream is set in another thread it is wrapped in an RLock
                         if packet.id != KeepAlive.id:
-                            self.connection.put_upstream(packet)
+                            self.connection.send_to_client(packet)
                     else:
                         raise EOFError()
             except EOFError:

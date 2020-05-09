@@ -14,7 +14,7 @@ from src.networking.game_state import GameState
 
 
 class Connection(threading.Thread):
-    def __init__(self, ip=None, port=None):
+    def __init__(self, ip=None, port=None, upstream=None):
         threading.Thread.__init__(self)
         self.threshold = None
         self.address = (ip, port)
@@ -24,11 +24,13 @@ class Connection(threading.Thread):
         self.stream = None
 
         self.upstream_lock = RLock()
-        self.upstream = UpstreamThread()
+        self.upstream = upstream
 
         self.compression_threshold = None
 
-        self.initialize_socket(socket.socket())
+        # By default we generate a new socket for our upstream
+        # But this is replaced in MinecraftServer with the client
+        self.initialize_socket_upstream(socket.socket())
 
     def stop(self):
         if self.packet_handler:
@@ -38,22 +40,21 @@ class Connection(threading.Thread):
             if self.upstream:
                 self.upstream.stop()
 
-    def initialize_socket(self, sock):
-        self.socket = sock
-        """ Create a read only blocking file interface (stream) for the socket """
-        self.stream = self.socket.makefile('rb')
+    def initialize_socket_upstream(self, sock):
+        self.initialize_socket(sock)
         with self.upstream_lock:
             if self.upstream:
                 self.upstream.set_socket(self.socket)
+
+    def initialize_socket(self, sock):
+        self.socket = sock
+        self.stream = self.socket.makefile('rb')
 
     def destroy_socket(self):
         try:
             self.socket.close()
             self.socket = None
             self.stream = None
-            with self.upstream_lock:
-                if self.upstream:
-                    self.upstream.set_socket(None)
             print("Socket shutdown and closed.", flush=True)
         except OSError:
             print("Failed to reset socket", flush=True)
@@ -79,6 +80,7 @@ class Connection(threading.Thread):
     # We need this to stop reading packets from the dead stream
     # which halts the wait thread
     def on_disconnect(self):
+        self.stop()
         self.destroy_socket()
 
     def send_packet_buffer_raw(self, packet_buffer):
@@ -129,7 +131,7 @@ class Connection(threading.Thread):
 # Assume that a MinecraftConnection has to stay active at all times
 class MinecraftConnection(Connection):
     def __init__(self, username, ip, protocol, port=25565, server_port=1001, profile=None, listen_thread=None):
-        super().__init__(ip, port)
+        super().__init__(ip, port, UpstreamThread())
 
         self.username = username
         self.protocol = protocol
@@ -137,8 +139,8 @@ class MinecraftConnection(Connection):
         self.server_port = server_port
         self.listen_thread = listen_thread
 
-        # JoinGame, ServerDifficulty, SpawnPosition, Respawn
-        join_ids = [0x23, 0x0D, 0x46, 0x35]
+        # JoinGame, ServerDifficulty, SpawnPosition, Respawn, Experience, UpdateHealth
+        join_ids = [0x23, 0x0D, 0x46, 0x35, 0x40, 0x41]
         self.game_state = GameState(join_ids)
 
         self.packet_processor = ClientboundProcessor(self.game_state)
@@ -147,6 +149,12 @@ class MinecraftConnection(Connection):
 
         self.local_client_upstream = None
         self.client_upstream_lock = RLock()
+
+        # Keeping the child server's upstream alive as long as possible prevents the BrokenPipeError bug
+        # So pass it in as a construction argument instead of something it spawns itself
+        # Then we can just redirect its socket if need be
+        self.server_upstream = UpstreamThread()
+        self.server_upstream.start()
 
         self.auth = Auth(username, profile)
 
@@ -160,17 +168,19 @@ class MinecraftConnection(Connection):
 
     @property
     def client_upstream(self):
-        return self.local_client_upstream
+        with self.client_upstream_lock:
+            return self.local_client_upstream
 
     def set_client_upstream(self, upstream):
         with self.client_upstream_lock:
             self.local_client_upstream = upstream
 
+    # Sends to the client through its upstream if we have one
     # Guarantees upstream is not set to None while putting
-    def put_upstream(self, packet):
+    def send_to_client(self, packet):
         with self.client_upstream_lock:
-            if self.client_upstream:
-                self.client_upstream.put(packet.compressed_buffer.bytes)
+            if self.local_client_upstream:
+                self.local_client_upstream.put(packet.compressed_buffer.bytes)
 
     """ Connect to the socket and start a connection thread """
     def connect(self):
@@ -184,6 +194,8 @@ class MinecraftConnection(Connection):
 
     def stop(self):
         super().stop()
+        with self.client_upstream_lock:
+            self.server_upstream.stop()
         self.worker_processor.stop()
 
     def on_disconnect(self):
@@ -196,56 +208,71 @@ class MinecraftConnection(Connection):
         # Terminate the server threads if there is one
         if self.server is not None:
             self.server.stop()
+            # Forcibly destroy the server's socket
+            self.server.destroy_socket()
 
     def initialize_connection(self):
         if self.connect():
-            self.start_server()
             return True
         return False
 
     def start_server(self):
-        self.server = MinecraftServer(self, self.server_port, self.listen_thread)
+        self.server = MinecraftServer(self, self.server_port, self.listen_thread, self.server_upstream)
 
 
 class MinecraftServer(Connection):
     """ Used for listening on a port for a connection """
-    def __init__(self, mc_connection, port=25565, listen_thread=None):
-        super().__init__('localhost', port)
+    def __init__(self, mc_connection, port=25565, listen_thread=None, upstream=None):
+        super().__init__('localhost', port, upstream)
         self.mc_connection = mc_connection
         self.packet_handler = ClientboundLoginHandler(self, mc_connection)
 
-        self.running = True
-        self.start_lock = RLock()
+        self.start_lock = threading.Lock()
 
         # Every second send an animation swing to prevent AFK kicks while client_upstream is DCed
         self.anti_afk = AntiAFKThread(self.mc_connection)
         self.anti_afk.start()
 
+        self.client_socket = None
+
         self.listen_thread = listen_thread.set_server(self)
+
+    def finalize_socket_upstream(self):
+        self.initialize_socket_upstream(self.client_socket)
 
     # Note that when mcidle terminates first MinecraftConnection does
     def on_disconnect(self):
-        print("Called MinecraftServer::on_disconnect()...", flush=True)
-        self.stop()
-        # Only re-create the server if we're still connected to our target server
-        if self.mc_connection and self.mc_connection.upstream.connected():
-            super().on_disconnect()
-            # Replace our server object to restart the MinecraftServer state easily
-            self.mc_connection.start_server()
+        # Sometimes on_disconnect() is called and then in the middle of executing
+        # we call start_with_socket which causes a weird bug so we need the lock here
+        # to make sure they are separate events
+        with self.start_lock:
+            print("Called MinecraftServer::on_disconnect()...", flush=True)
+            self.stop()
+            # Only re-create the server if we're still connected to our target server
+            if self.mc_connection and self.mc_connection.upstream.connected():
+                self.destroy_socket()
+                # Replace our server object to restart the MinecraftServer state easily
+                # To be honest this is a bad pattern and it's better to just never kill MinecraftServer
+                # but then we'd have to overhaul how the packet handlers work since start() calls run()
+                # which calls packet handler logic
+                # The overhaul would just be to construct the handlers in start_with_socket
+                self.mc_connection.start_server()
 
-    def start(self, connection):
+    def start_with_socket(self, sock):
         with self.start_lock:
             if self.mc_connection.upstream.connected():
                 print("Starting MinecraftServer!", flush=True)
-                # Sets our upstream to the client connection
-                self.initialize_socket(connection)
-                # Runs initialize_connection and the main packet handler in a separate thread
+                self.initialize_socket(sock)
+                self.client_socket = sock
                 super().start()
 
     def stop(self):
-        self.running = False
         # Bugfix: Makes sure listen_thread does not have a server
         # So it accepts a new client forcefully
         self.listen_thread.set_server(None)
-        super().stop()
+        self.upstream.set_socket(None)
+
+        if self.packet_handler:
+            self.packet_handler.stop()
+
         self.anti_afk.stop()

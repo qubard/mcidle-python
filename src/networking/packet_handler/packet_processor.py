@@ -24,9 +24,8 @@ class ClientboundProcessor(PacketProcessor):
         destroy_entities = DestroyEntities().read(packet.packet_buffer)
         for entity_id in destroy_entities.Entities:
             if entity_id in self.game_state.entities:
-                print("Removed entity ID: %s" % entity_id, self.game_state.entities.keys(),
-                      flush=True)
-                del self.game_state.entities[entity_id]  # Delete the entity
+                print("Removed entity ID: %s" % entity_id, flush=True)
+                del self.game_state.entities[entity_id] # Delete the entity
 
     def player_list(self, packet):
         player_list_item = PlayerListItem().read(packet.packet_buffer)
@@ -47,8 +46,7 @@ class ClientboundProcessor(PacketProcessor):
         spawn_entity = SpawnEntity().read(packet.packet_buffer)
         if spawn_entity.EntityID not in self.game_state.entities:
             self.game_state.entities[spawn_entity.EntityID] = packet
-            print("Added entity ID: %s" % spawn_entity.EntityID, self.game_state.entities.keys(),
-                  flush=True)
+            print("Added entity ID: %s" % spawn_entity.EntityID, flush=True)
 
     def chunk_unload(self, packet):
         unload_chunk = UnloadChunk().read(packet.packet_buffer)

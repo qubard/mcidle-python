@@ -70,6 +70,8 @@ class LoginHandler(PacketHandler):
             return False
 
         self.connection.upstream.start()
+        # Start listening for a connection only if we've officially connected
+        self.connection.start_server()
 
         return True
 

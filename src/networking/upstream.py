@@ -12,6 +12,7 @@ class UpstreamThread(threading.Thread):
         self.running = True
 
     def set_socket(self, socket):
+        self.clear()
         with self.socket_lock:
             self.socket = socket
 
@@ -21,6 +22,10 @@ class UpstreamThread(threading.Thread):
 
     def put(self, b):
         self.queue.put(b)
+
+    def clear(self):
+        while not self.queue.empty():
+            self.queue.get()
 
     def stop(self):
         self.set_socket(None)

@@ -23,10 +23,15 @@ def update_credentials(username, password):
         auth = Auth()
         Auth.save_to_disk(auth.authenticate(username=username, password=password))
 
-def try_auth(username, password):
-    update_credentials(args.username, args.password)
 
-    credentials = Auth.read_from_disk()
+def try_auth(username, password):
+    try:
+        credentials = Auth.read_from_disk()
+    except FileNotFoundError:
+        print("Credentials not found..", flush=True)
+        update_credentials(username, password)
+        credentials = Auth.read_from_disk()
+
     auth = Auth().assign_profile(credentials)
 
     if not auth.validate():
@@ -35,7 +40,8 @@ def try_auth(username, password):
     else:
         print("Credentials are valid!", flush=True)
     return credentials
-        
+
+
 def init():
     if args.ip is None:
         raise RuntimeError("Please specify an ip address!")
@@ -48,22 +54,25 @@ def init():
     # Due to restarting the Minecraft client over and over
     # So when we reconnect we need to generate potentially new credentials to avoid session errors
     import time
+    reconnect_rate = 15
+
     while True:
-        credentials = try_auth(args.username, args.password) # Make sure we can still auth
+        print("Trying to auth..", flush=True)
+        credentials = try_auth(args.username, args.password)  # Make sure we can still auth
+        print("Finished auth", flush=True)
         if credentials:
             listen_thread.set_server(None)
             conn = MinecraftConnection(ip=args.ip, port=args.port, server_port=args.dport, protocol=args.protocol, \
                                        username=credentials['selectedProfile']['name'], profile=credentials, \
                                        listen_thread=listen_thread)
             conn.run_handler()
-            print("Disconnected..reconnecting in 5 seconds", flush=True)
-            time.sleep(5)
+            print("Disconnected..reconnecting in %s seconds" % reconnect_rate, flush=True)
+            time.sleep(reconnect_rate)
             print("Reconnecting..", flush=True)
         else:
             if not args.username or not args.password:
                 print("Can't re-auth user because no user or password provided!", flush=True)
                 return
-            print("Trying to auth again", flush=True)
             time.sleep(3)
 
 if __name__ == '__main__':

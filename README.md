@@ -67,8 +67,6 @@ optional arguments:
   requirements. Install it
   [here](https://www.microsoft.com/en-ca/download/details.aspx?id=48145). If you can't build it still try installing the latest Visual Studio.
   
-- `BrokenPipeError` occurs when `multiprocessing.Queue` can't flush data because it's been destroyed (doesn't seem to be a way to avoid this)
-
 - Placing a block or modifying the chunk you're in then reconnecting will not show the changes. This is because I did
   not add the processing for chunk sections yet/digging packets (see the `experimental` branch, but Python is still too
   slow to handle these things it seems). To solve this walk out of range of the chunks and then back in to force the

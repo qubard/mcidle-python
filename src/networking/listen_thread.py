@@ -28,6 +28,6 @@ class ListenThread(threading.Thread):
 
                 with self.server_lock:
                     if self.server:
-                        self.server.start(connection)
+                        self.server.start_with_socket(connection)
             except OSError:
                 print("Failed to bind socket (race condition?), it's already on", flush=True)

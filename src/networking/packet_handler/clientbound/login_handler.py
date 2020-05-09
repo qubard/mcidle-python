@@ -159,6 +159,7 @@ class LoginHandler(PacketHandler):
         # Decrypt the shared secret
         shared_secret = privkey.decrypt(encryption_response.SharedSecret, PKCS1v15())
 
+        self.connection.finalize_socket_upstream()
         # Enable encryption using the shared secret
         self.connection.enable_encryption(shared_secret)
 
@@ -175,7 +176,8 @@ class LoginHandler(PacketHandler):
 
         # Let the real connection know about our client
         # Now the client can start receiving forwarded data
-        self.connection.upstream.start()
+        # Technically self.connection.upstream is always the same though
+        self.connection.upstream.clear() # Clear it just to be safe
         self.mc_connection.set_client_upstream(self.connection.upstream)
         print("Connected to upstream", flush=True)
 
