@@ -159,7 +159,6 @@ class LoginHandler(PacketHandler):
         # Decrypt the shared secret
         shared_secret = privkey.decrypt(encryption_response.SharedSecret, PKCS1v15())
 
-        self.connection.finalize_socket_upstream()
         # Enable encryption using the shared secret
         self.connection.enable_encryption(shared_secret)
 
