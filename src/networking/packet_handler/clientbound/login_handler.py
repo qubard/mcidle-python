@@ -167,7 +167,7 @@ class LoginHandler(PacketHandler):
             print("Joining world", flush=True)
             self.join_world()
             print("Finished joining world", flush=True)
-        except (ValueError, EOFError, InvalidPacketID, ConnectionRefusedError, ConnectionAbortedError, \
+        except (ValueError, EOFError, InvalidPacketID, AttributeError, ConnectionRefusedError, ConnectionAbortedError, \
                 ConnectionResetError):
             return False
 

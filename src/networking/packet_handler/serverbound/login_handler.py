@@ -55,7 +55,8 @@ class LoginHandler(PacketHandler):
             unknown_packet = self.read_packet_from_stream().packet_buffer
 
             print("Unknown packet", unknown_packet, flush=True)
-        except (EOFError, ValueError):
+        except (EOFError, ValueError, AttributeError, \
+                ConnectionResetError, ConnectionAbortedError, ConnectionRefusedError, ConnectionError):
             # Fail to join
             return False
 
