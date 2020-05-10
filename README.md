@@ -1,6 +1,8 @@
 # mcidle-python
 An idling cli for minecraft which works by proxying your connection to a minecraft server remotely allowing you to disconnect at any point but remain connected to the server through mcidle.
 
+[Watch a demo here!](https://youtu.be/r26vacizGJw)
+
 It is particularly useful for servers which punish you for disconnecting (e.g `2b2t.org` which has queues)
 
 Feel free to submit an issue if something doesn't work properly. I would like to point out that this has not been
