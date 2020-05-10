@@ -34,11 +34,11 @@ If you keep on logging in too fast (re-updating credentials) you might get an "i
 
 # Example Usage
 
-Run `python mcidle.py --username=example@example.com --password=pw123 --ip=2b2t.org` to point mcidle to `2b2t.org` and listen on `localhost:1337` with the login information `example@example.com` and password `pw123`.
+Run `python3 mcidle.py --username=example@example.com --password=pw123 --ip=2b2t.org` to point mcidle to `2b2t.org` and listen on `localhost:1337` with the login information `example@example.com` and password `pw123`.
 
 Connecting to `localhost:1337` with your Minecraft client will let you resume your connection to `2b2t.org`. You can change the port at any time by changing the `dport` flag.
 
-Run `python mcidle.py --help` for additional instructions on how to use the command-line utility.
+Run `python3 mcidle.py --help` for additional instructions on how to use the command-line utility.
 
 ```
 usage: mcidle.py [-h] [--ip IP] [--port PORT] [--protocol PROTOCOL]
