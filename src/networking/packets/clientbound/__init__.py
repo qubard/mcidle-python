@@ -76,12 +76,6 @@ class ChunkData(Packet):
     def read_fields(self, packet_buffer):
         self.ChunkX = Integer.read(packet_buffer)
         self.ChunkZ = Integer.read(packet_buffer)
-        self.GroundUpContinuous = Boolean.read(packet_buffer)
-        self.PrimaryBitMask = VarInt.read(packet_buffer)
-        self.Data = VarIntPrefixedByteArray.read(packet_buffer)
-
-        self.NumBlockEnts = VarInt.read(packet_buffer)
-
 
 
 class UnloadChunk(Packet):

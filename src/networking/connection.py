@@ -214,7 +214,6 @@ class MinecraftConnection(Connection):
         # Terminate the server threads if there is one
         if self.server:
             self.server.stop()
-            # Forcibly destroy the server's socket
             self.server.destroy_socket()
 
     def initialize_connection(self):
