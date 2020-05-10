@@ -15,45 +15,49 @@ class LoginHandler(PacketHandler):
     """ Do all the authentication and logging in"""
     def setup(self):
         # Send a handshake and login start packet
-        handshake = Handshake(ProtocolVersion=self.connection.protocol, ServerAddress=self.connection.address[0], \
-                              ServerPort=self.connection.address[1], NextState=2)
-        login_start = LoginStart(Name=self.connection.username)
+        try:
+            handshake = Handshake(ProtocolVersion=self.connection.protocol, ServerAddress=self.connection.address[0], \
+                                  ServerPort=self.connection.address[1], NextState=2)
+            login_start = LoginStart(Name=self.connection.username)
 
-        print("Sending handshake", flush=True)
-        self.connection.send_packet_raw(handshake)
-        print("Done sending handshake", flush=True)
-        self.connection.send_packet_raw(login_start)
+            print("Sending handshake", flush=True)
+            self.connection.send_packet_raw(handshake)
+            print("Done sending handshake", flush=True)
+            self.connection.send_packet_raw(login_start)
 
-        encryption_request = EncryptionRequest().read(self.read_packet_from_stream().packet_buffer)
+            encryption_request = EncryptionRequest().read(self.read_packet_from_stream().packet_buffer)
 
-        self.connection.VerifyToken = encryption_request.VerifyToken
+            self.connection.VerifyToken = encryption_request.VerifyToken
 
-        # Generate the encryption response to send over
-        shared_secret = generate_shared_secret()
-        (encrypted_token, encrypted_secret) = encrypt_token_and_secret(encryption_request.PublicKey,
-                                                                       encryption_request.VerifyToken, shared_secret)
-        encryption_response = EncryptionResponse(SharedSecret=encrypted_secret, VerifyToken=encrypted_token)
+            # Generate the encryption response to send over
+            shared_secret = generate_shared_secret()
+            (encrypted_token, encrypted_secret) = encrypt_token_and_secret(encryption_request.PublicKey,
+                                                                           encryption_request.VerifyToken, shared_secret)
+            encryption_response = EncryptionResponse(SharedSecret=encrypted_secret, VerifyToken=encrypted_token)
 
-        # Generate an auth token, serverID is always empty
-        server_id_hash = generate_verification_hash(encryption_request.ServerID, shared_secret,
-                                                    encryption_request.PublicKey)
+            # Generate an auth token, serverID is always empty
+            server_id_hash = generate_verification_hash(encryption_request.ServerID, shared_secret,
+                                                        encryption_request.PublicKey)
 
-        # Client auth
-        self.connection.auth.join(server_id_hash)
+            # Client auth
+            self.connection.auth.join(server_id_hash)
 
-        # Send the encryption response
-        self.connection.send_packet_raw(encryption_response)
+            # Send the encryption response
+            self.connection.send_packet_raw(encryption_response)
 
-        # Enable encryption using the shared secret
-        self.connection.enable_encryption(shared_secret)
+            # Enable encryption using the shared secret
+            self.connection.enable_encryption(shared_secret)
 
-        print("Enabled encryption", flush=True)
+            print("Enabled encryption", flush=True)
 
-        # Enable compression and set the threshold
-        # We aren't sure if compression will be sent, or LoginSuccess immediately after
-        unknown_packet = self.read_packet_from_stream().packet_buffer
+            # Enable compression and set the threshold
+            # We aren't sure if compression will be sent, or LoginSuccess immediately after
+            unknown_packet = self.read_packet_from_stream().packet_buffer
 
-        print("Unknown packet", unknown_packet, flush=True)
+            print("Unknown packet", unknown_packet, flush=True)
+        except:
+            # Fail to join
+            return False
 
         try:
             set_compression = SetCompression().read(unknown_packet)
