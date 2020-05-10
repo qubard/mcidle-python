@@ -212,7 +212,7 @@ class MinecraftConnection(Connection):
         self.stop()
 
         # Terminate the server threads if there is one
-        if self.server is not None:
+        if self.server:
             self.server.stop()
             # Forcibly destroy the server's socket
             self.server.destroy_socket()
@@ -264,10 +264,14 @@ class MinecraftServer(Connection):
     def start_with_socket(self, sock):
         with self.start_lock:
             if self.mc_connection.upstream.connected():
-                print("Starting MinecraftServer!", flush=True)
-                self.initialize_socket(sock)
-                self.client_socket = sock
-                super().start()
+                if not self.client_socket:
+                    print("Starting MinecraftServer!", flush=True)
+                    self.initialize_socket(sock)
+                    self.client_socket = sock
+                    super().start()
+                else:
+                    print("Rejected client start_with_socket, client already connected", flush=True)
+                    sock.close()
 
     def stop(self):
         # Bugfix: Makes sure listen_thread does not have a server
