@@ -7,6 +7,8 @@ from src.networking.packets.clientbound import PlayerPositionAndLook as PlayerPo
 from src.networking.packets.clientbound import HeldItemChange as HeldItemChangeClientbound
 from src.networking.packets.clientbound import PlayerAbilities as PlayerAbilitiesClientbound
 
+from src.networking.packets.exceptions import InvalidPacketID
+
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.primitives import serialization
@@ -60,118 +62,114 @@ class LoginHandler(PacketHandler):
         self.mc_connection.game_state.release()
 
     def join_world(self):
-        self.mc_connection.game_state.acquire()
+        # If there's an exception releasing a lock actually happens this way
+        with self.mc_connection.game_state.state_lock:
+            # Send the player all the packets that lets them join the world
+            for id_ in self.mc_connection.game_state.join_ids:
+                if id_ in self.mc_connection.game_state.packet_log:
+                    packet = self.mc_connection.game_state.packet_log[id_]
+                    self.connection.send_packet_buffer_raw(packet.compressed_buffer)
 
-        # Send the player all the packets that lets them join the world
-        for id_ in self.mc_connection.game_state.join_ids:
-            if id_ in self.mc_connection.game_state.packet_log:
-                packet = self.mc_connection.game_state.packet_log[id_]
-                self.connection.send_packet_buffer_raw(packet.compressed_buffer)
+            # Send their player abilities
+            self.connection.send_packet_raw(self.mc_connection.game_state.abilities)
 
-        # Send their player abilities
-        self.connection.send_packet_raw(self.mc_connection.game_state.abilities)
+            # Send them their last position/look if it exists
+            if PlayerPositionAndLookClientbound.id in self.mc_connection.game_state.packet_log:
+                if self.mc_connection and self.mc_connection.game_state.last_pos_packet:
+                    last_packet = self.mc_connection.game_state.last_pos_packet
 
-        # Send them their last position/look if it exists
-        if PlayerPositionAndLookClientbound.id in self.mc_connection.game_state.packet_log:
-            if self.mc_connection and self.mc_connection.game_state.last_pos_packet:
-                last_packet = self.mc_connection.game_state.last_pos_packet
+                    pos_packet = PlayerPositionAndLookClientbound( \
+                        X=last_packet.X, Y=last_packet.Y, Z=last_packet.Z, \
+                        Yaw=self.mc_connection.game_state.last_yaw, Pitch=self.mc_connection.game_state.last_pitch, Flags=0, \
+                        TeleportID=self.mc_connection.game_state.teleport_id)
+                    self.mc_connection.game_state.teleport_id += 1
+                    self.connection.send_packet_raw(pos_packet)
+                else:
+                    self.connection.send_packet_buffer_raw(
+                        self.mc_connection.game_state.packet_log[PlayerPositionAndLookClientbound.id] \
+                            .compressed_buffer)  # Send the last packet that we got
 
-                pos_packet = PlayerPositionAndLookClientbound( \
-                    X=last_packet.X, Y=last_packet.Y, Z=last_packet.Z, \
-                    Yaw=self.mc_connection.game_state.last_yaw, Pitch=self.mc_connection.game_state.last_pitch, Flags=0, \
-                    TeleportID=self.mc_connection.game_state.teleport_id)
-                self.mc_connection.game_state.teleport_id += 1
-                self.connection.send_packet_raw(pos_packet)
-            else:
-                self.connection.send_packet_buffer_raw(
-                    self.mc_connection.game_state.packet_log[PlayerPositionAndLookClientbound.id] \
-                        .compressed_buffer)  # Send the last packet that we got
+            if TimeUpdate.id in self.mc_connection.game_state.packet_log:
+                self.connection.send_packet_buffer_raw(self.mc_connection.game_state.packet_log\
+                                                           [TimeUpdate.id].compressed_buffer)
 
-        if TimeUpdate.id in self.mc_connection.game_state.packet_log:
-            self.connection.send_packet_buffer_raw(self.mc_connection.game_state.packet_log\
-                                                       [TimeUpdate.id].compressed_buffer)
+            # Send the player list items (to see other players)
+            self.connection.send_single_packet_dict(self.mc_connection.game_state.player_list)
 
-        # Send the player list items (to see other players)
-        self.connection.send_single_packet_dict(self.mc_connection.game_state.player_list)
+            # Send all loaded chunks
+            print("Sending chunks", flush=True)
+            self.connection.send_single_packet_dict(self.mc_connection.game_state.chunks)
+            print("Done sending chunks", flush=True)
 
-        # Send all loaded chunks
-        print("Sending chunks", flush=True)
-        self.connection.send_single_packet_dict(self.mc_connection.game_state.chunks)
-        print("Done sending chunks", flush=True)
+            # Send the player all the currently loaded entities
+            self.connection.send_single_packet_dict(self.mc_connection.game_state.entities)
 
-        # Send the player all the currently loaded entities
-        self.connection.send_single_packet_dict(self.mc_connection.game_state.entities)
+            # Player sends ClientStatus, this is important for respawning if died
+            self.mc_connection.send_packet_raw(ClientStatus(ActionID=0))
 
-        # Player sends ClientStatus, this is important for respawning if died
-        self.mc_connection.send_packet_raw(ClientStatus(ActionID=0))
+            # Send their last held item
+            self.connection.send_packet_raw(HeldItemChangeClientbound(Slot=self.mc_connection.game_state.held_item_slot))
 
-        # Send their last held item
-        self.connection.send_packet_raw(HeldItemChangeClientbound(Slot=self.mc_connection.game_state.held_item_slot))
-
-        # Send their current game state
-        self.connection.send_packet_raw(GameState(Reason=self.mc_connection.game_state.gs_reason,\
-                                                    Value=self.mc_connection.game_state.gs_value))
-        # Send their inventory
-        self.connection.send_single_packet_dict(self.mc_connection.game_state.main_inventory)
-
-        self.mc_connection.game_state.release()
+            # Send their current game state
+            self.connection.send_packet_raw(GameState(Reason=self.mc_connection.game_state.gs_reason,\
+                                                        Value=self.mc_connection.game_state.gs_value))
+            # Send their inventory
+            self.connection.send_single_packet_dict(self.mc_connection.game_state.main_inventory)
 
     def setup(self):
-        print("Reading handshake", flush=True)
+        try:
+            print("Reading handshake", flush=True)
 
-        pkt = self.read_packet_from_stream()
-        if pkt is None:
+            Handshake().read(self.read_packet_from_stream().packet_buffer)
+
+            print("Reading login start", flush=True)
+            LoginStart().read(self.read_packet_from_stream().packet_buffer)
+
+            # Generate a dummy (pubkey, privkey) pair
+            privkey = rsa.generate_private_key(public_exponent=65537, key_size=2048, backend=default_backend())
+            pubkey = privkey.public_key().public_bytes(encoding=serialization.Encoding.DER,
+                                                       format=serialization.PublicFormat.SubjectPublicKeyInfo)
+
+            print("Trying to send encryption request", flush=True)
+            self.connection.send_packet_raw(
+                EncryptionRequest(ServerID='', PublicKey=pubkey, VerifyToken=self.mc_connection.VerifyToken))
+
+            print("Encryption request sent", flush=True)
+
+            # The encryption response will be encrypted with the server's public key
+            # Luckily, when this goes wrong read_packet returns None
+            _ = self.read_packet_from_stream()
+
+            if _ is None:
+                print("Invalid encryption response!", flush=True)
+                self.connection.on_disconnect()
+                return False
+
+            encryption_response = EncryptionResponse().read(_.packet_buffer)
+
+            # Decrypt and verify the verify token
+            verify_token = privkey.decrypt(encryption_response.VerifyToken, PKCS1v15())
+            assert (verify_token == self.mc_connection.VerifyToken)
+
+            # Decrypt the shared secret
+            shared_secret = privkey.decrypt(encryption_response.SharedSecret, PKCS1v15())
+
+            # Enable encryption using the shared secret
+            self.connection.enable_encryption(shared_secret)
+
+            # Enable compression and assign the threshold to the connection
+            if self.mc_connection.compression_threshold >= 0:
+                self.connection.send_packet_raw(SetCompression(Threshold=self.mc_connection.compression_threshold))
+                self.connection.compression_threshold = self.mc_connection.compression_threshold
+
+            self.connection.send_packet_raw(self.mc_connection.login_success)
+
+            print("Joining world", flush=True)
+            self.join_world()
+            print("Finished joining world", flush=True)
+        except (ValueError, EOFError, InvalidPacketID, ConnectionRefusedError, ConnectionAbortedError, \
+                ConnectionResetError):
             return False
-        Handshake().read(pkt.packet_buffer)
-
-        print("Reading login start", flush=True)
-        pkt = self.read_packet_from_stream()
-        if pkt is None:
-            return False
-        LoginStart().read(pkt.packet_buffer)
-
-        # Generate a dummy (pubkey, privkey) pair
-        privkey = rsa.generate_private_key(public_exponent=65537, key_size=2048, backend=default_backend())
-        pubkey = privkey.public_key().public_bytes(encoding=serialization.Encoding.DER,
-                                                   format=serialization.PublicFormat.SubjectPublicKeyInfo)
-
-        print("Trying to send encryption request", flush=True)
-        self.connection.send_packet_raw(
-            EncryptionRequest(ServerID='', PublicKey=pubkey, VerifyToken=self.mc_connection.VerifyToken))
-
-        print("Encryption request sent", flush=True)
-
-        # The encryption response will be encrypted with the server's public key
-        # Luckily, when this goes wrong read_packet returns None
-        _ = self.read_packet_from_stream()
-
-        if _ is None:
-            print("Invalid encryption response!", flush=True)
-            self.connection.on_disconnect()
-            return False
-
-        encryption_response = EncryptionResponse().read(_.packet_buffer)
-
-        # Decrypt and verify the verify token
-        verify_token = privkey.decrypt(encryption_response.VerifyToken, PKCS1v15())
-        assert (verify_token == self.mc_connection.VerifyToken)
-
-        # Decrypt the shared secret
-        shared_secret = privkey.decrypt(encryption_response.SharedSecret, PKCS1v15())
-
-        # Enable encryption using the shared secret
-        self.connection.enable_encryption(shared_secret)
-
-        # Enable compression and assign the threshold to the connection
-        if self.mc_connection.compression_threshold >= 0:
-            self.connection.send_packet_raw(SetCompression(Threshold=self.mc_connection.compression_threshold))
-            self.connection.compression_threshold = self.mc_connection.compression_threshold
-
-        self.connection.send_packet_raw(self.mc_connection.login_success)
-
-        print("Joining world", flush=True)
-        self.join_world()
-        print("Finished joining world", flush=True)
 
         # Let the real connection know about our client
         # Now the client can start receiving forwarded data

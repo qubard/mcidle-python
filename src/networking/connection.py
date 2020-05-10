@@ -52,7 +52,8 @@ class Connection(threading.Thread):
 
     def destroy_socket(self):
         try:
-            self.socket.close()
+            if self.socket:
+                self.socket.close()
             self.socket = None
             self.stream = None
             print("Socket shutdown and closed.", flush=True)
@@ -123,6 +124,9 @@ class Connection(threading.Thread):
                     self.packet_handler = self.packet_handler.next_handler()
 
                 self.packet_handler.handle()
+            else:
+                # Clean up if we can't even setup the handler
+                self.on_disconnect()
 
     def run(self):
         self.run_handler()
