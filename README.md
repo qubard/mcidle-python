@@ -76,7 +76,7 @@ optional arguments:
 
 - If you run this on some VPS providers your ip range might be blocked and you won't be able to connect
 
-- If you get hit by a mob off a cliff and it requires your gravity to be ticked then you'll be considered flying and kicked
+- Since you don't move while idling if someone digs blocks underneath you and makes the game think you're falling you can be kicked for flying
 
 # TODOs
 - Avoid destroying/recreating threads since it is very bug prone

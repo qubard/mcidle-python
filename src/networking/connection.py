@@ -217,9 +217,7 @@ class MinecraftConnection(Connection):
             self.server.destroy_socket()
 
     def initialize_connection(self):
-        if self.connect():
-            return True
-        return False
+        return self.connect()
 
     def start_server(self):
         self.server = MinecraftServer(self, self.server_port, self.listen_thread, self.server_upstream)
