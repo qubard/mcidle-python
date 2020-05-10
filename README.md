@@ -75,6 +75,9 @@ optional arguments:
 - Some servers use something like `TCP shield` which can detect if you're using a proxy (use wireshark to see the endpoint you connect to) which stops you from connecting.
 
 - If you run this on some VPS providers your ip range might be blocked and you won't be able to connect
+
+- If you get hit by a mob off a cliff and it requires your gravity to be ticked then you'll be considered flying and kicked
+
 # TODOs
 - Avoid destroying/recreating threads since it is very bug prone
 - handle `UpdateBlockEntity`
