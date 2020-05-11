@@ -1,5 +1,5 @@
 # mcidle-python
-An idling cli for minecraft which works by proxying your connection to a minecraft server remotely allowing you to disconnect at any point but remain connected to the server through mcidle.
+An idling cli for Minecraft that tunnels your connection to a Minecraft server allowing you to disconnect at any point but remain connected to the server through `mcidle`.
 
 [Watch a demo here!](https://youtu.be/r26vacizGJw)
 
@@ -21,6 +21,8 @@ Make sure you connect with the exact game version that matches the mcidle server
 # Setup
 
 Simply run `pip install -r requirements.txt` to install all the necessary packages.
+
+A simple way to run it in the background of a server is to use `nohup python3 mcidle.py > output.log &`. To terminate, run `pkill python` which will kill all running instances of python.
 
 # Notes
 
