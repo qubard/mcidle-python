@@ -30,8 +30,11 @@ def try_auth(username, password):
         credentials = Auth.read_from_disk()
     except FileNotFoundError:
         print("Credentials not found..", flush=True)
-        update_credentials(username, password)
-        credentials = Auth.read_from_disk()
+        try:
+            update_credentials(username, password)
+            credentials = Auth.read_from_disk()
+        except Exception as e:
+            return None
 
     auth = Auth().assign_profile(credentials)
 
@@ -58,7 +61,11 @@ def init():
 
     while True:
         print("Trying to auth..", flush=True)
-        credentials = try_auth(args.username, args.password)  # Make sure we can still auth
+        try:
+            credentials = try_auth(args.username, args.password)  # Make sure we can still auth
+        except:
+            print("Invalid password or blocked from auth server for reconnecting too fast..", flush=True)
+
         print("Finished auth", flush=True)
         if credentials:
             print("Starting..", flush=True)
@@ -75,7 +82,8 @@ def init():
             if not args.username or not args.password:
                 print("Can't re-auth user because no user or password provided!", flush=True)
                 return
-            time.sleep(3)
+            print("Username or password wrong, waiting 30 seconds before reconnecting..")
+            time.sleep(30)
 
 if __name__ == '__main__':
     init()
