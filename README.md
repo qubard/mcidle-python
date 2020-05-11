@@ -3,10 +3,12 @@ An idling cli for Minecraft that tunnels your connection to a Minecraft server a
 
 [Watch a demo here!](https://youtu.be/r26vacizGJw)
 
-It is particularly useful for servers which punish you for disconnecting (e.g `2b2t.org` which has queues)
+It is particularly useful for servers which punish you for disconnecting (e.g `2b2t.org` which has queues).
 
 Feel free to submit an issue if something doesn't work properly. I would like to point out that this has not been
 heavily tested so there will definitely be bugs.
+
+This only has only been tested to work on python3.7 and below! python3.8 seems to break it with the `cryptography` library not being compiled for 3.8 or above. [Install python3.6.8 here](https://www.python.org/downloads/release/python-368/) if you're experiencing issues. You can see your python version by running `python` in a command prompt.
 
 # Supported Versions
 
@@ -18,9 +20,9 @@ If your game/server version is not listed below then `mcidle` will not function 
 
 Make sure you connect with the exact game version that matches the mcidle server and the real-server.
 
-# Setup
+# Installation Guide
 
-Simply run `pip install -r requirements.txt` to install all the necessary packages.
+Run `python -m pip install -U pip` and then `pip install -r requirements.txt` in the `mcidle-python` directory. Please note that you do need `python3.7` or below.
 
 A simple way to run it in the background of a server is to use `nohup python3 mcidle.py > output.log &`. To terminate, run `pkill python` which will kill all running instances of python.
 
@@ -67,9 +69,7 @@ optional arguments:
 
 - In past versions we used multiple threads for worker loggers with Python's `multiprocessing` library, but this actually slowed down the program significantly due to the huge cost of acquiring a lock on dictionary objects so by default now we use 1 thread for packet processing and a synchronized queue to avoid heavy lock hits
 
-- On some windows installs (Windows 10) you may get a `missing Visual C++ 14.0` error while installing the pip
-  requirements. Install it
-  [here](https://www.microsoft.com/en-ca/download/details.aspx?id=48145). If you can't build it still try installing the latest Visual Studio.
+- On some windows installs (Windows 10) you may not be able to install the `cryptography` package. This is because `cryptography` was not compiled for 3.8+. Install `python3.7` or below (preferably `3.6.8`) and try again.
   
 - Placing a block or modifying the chunk you're in then reconnecting will not show the changes. This is because I did
   not add the processing for chunk sections yet/digging packets (see the `experimental` branch, but Python is still too
