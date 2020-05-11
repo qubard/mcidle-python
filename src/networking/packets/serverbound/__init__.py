@@ -25,6 +25,13 @@ class Handshake(Packet):
     }
 
 
+class ClientStatus(Packet):
+    id = 0x41
+    definition = {
+        "ActionID": VarInt,
+    }
+
+
 class HeldItemChange(Packet):
     id = 0x1A
     definition = {

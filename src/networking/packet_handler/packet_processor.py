@@ -1,7 +1,7 @@
-from src.networking.packets.serverbound import KeepAlive as KeepAliveServerbound, TeleportConfirm
+from src.networking.packets.serverbound import KeepAlive as KeepAliveServerbound, TeleportConfirm, ClientStatus
 from src.networking.packets.clientbound import ChunkData, UnloadChunk, SpawnEntity, \
     DestroyEntities, KeepAlive, ChatMessage, PlayerPositionAndLook, TimeUpdate, \
-    HeldItemChange, SetSlot, PlayerListItem, PlayerAbilities, Respawn
+    HeldItemChange, SetSlot, PlayerListItem, PlayerAbilities, Respawn, UpdateHealth
 
 from src.networking.packets.clientbound import GameState as GameStateP
 
@@ -109,5 +109,13 @@ class ClientboundProcessor(PacketProcessor):
                 # In case the gamemode is changed through a respawn packet
                 respawn = Respawn().read(packet.packet_buffer)
                 self.game_state.gamemode = respawn.Gamemode
+            elif packet.id == UpdateHealth.id:
+                update_health = UpdateHealth().read(packet.packet_buffer)
+                self.game_state.update_health = update_health
+                # Respawn the player if they're dead..
+                print(update_health, flush=True)
+                if update_health.Health == 0:
+                    print("Client died, respawning", flush=True)
+                    return ClientStatus(ActionID=0)
 
         return None

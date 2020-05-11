@@ -7,7 +7,7 @@ from multiprocessing import Queue
 # and optionally write any responses in a thread-safe manner
 class WorkerProcessor(threading.Thread):
     def __init__(self, connection, packet_processor):
-        threading.Thread.__init__(self)
+        threading.Thread.__init__(self, daemon=True)
         self.connection = connection
         self.packet_processor = packet_processor
         self.queue = Queue()

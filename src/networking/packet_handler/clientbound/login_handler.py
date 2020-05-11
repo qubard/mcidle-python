@@ -70,8 +70,13 @@ class LoginHandler(PacketHandler):
                     packet = self.mc_connection.game_state.packet_log[id_]
                     self.connection.send_packet_buffer_raw(packet.compressed_buffer)
 
+            # Send their health
+            if self.mc_connection.game_state.update_health:
+                self.connection.send_packet_raw(self.mc_connection.game_state.update_health)
+
             # Send their player abilities
-            self.connection.send_packet_raw(self.mc_connection.game_state.abilities)
+            if self.mc_connection.game_state.abilities:
+                self.connection.send_packet_raw(self.mc_connection.game_state.abilities)
 
             # Send them their last position/look if it exists
             if PlayerPositionAndLookClientbound.id in self.mc_connection.game_state.packet_log:

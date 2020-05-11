@@ -6,7 +6,7 @@ from src.networking.packets.serverbound import Animation
 
 class AntiAFKThread(threading.Thread):
     def __init__(self, connection, rate=5):
-        threading.Thread.__init__(self)
+        threading.Thread.__init__(self, daemon=True)
         self.connection = connection
         self.rate = rate
         self.running = True

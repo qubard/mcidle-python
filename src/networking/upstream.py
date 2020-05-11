@@ -5,7 +5,7 @@ from multiprocessing import Queue
 
 class UpstreamThread(threading.Thread):
     def __init__(self):
-        threading.Thread.__init__(self)
+        threading.Thread.__init__(self, daemon=True)
         self.queue = Queue()
         self.socket = None
         self.socket_lock = threading.RLock()

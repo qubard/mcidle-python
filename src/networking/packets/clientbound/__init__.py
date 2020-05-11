@@ -32,6 +32,15 @@ class HeldItemChange(Packet):
     }
 
 
+class UpdateHealth(Packet):
+    id = 0x41
+    definition = {
+        "Health": Float,
+        "Food": VarInt,
+        "FoodSaturation": Float,
+    }
+
+
 class LoginSuccess(Packet):
     id = 0x02
     definition = {

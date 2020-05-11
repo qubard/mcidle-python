@@ -83,7 +83,7 @@ def init():
                 print("Can't re-auth user because no user or password provided!", flush=True)
                 return
             print("Username or password wrong, waiting 30 seconds before reconnecting..")
-            time.sleep(30)
+            time.sleep(15)
 
 if __name__ == '__main__':
     init()

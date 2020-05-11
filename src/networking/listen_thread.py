@@ -5,7 +5,7 @@ import threading
 class ListenThread(threading.Thread):
     def __init__(self, address):
         self.address = address
-        threading.Thread.__init__(self)
+        threading.Thread.__init__(self, daemon=True)
         self.socket = socket.socket()
         self.server = None
         self.server_lock = threading.RLock()

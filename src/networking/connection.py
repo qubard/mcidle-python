@@ -16,7 +16,7 @@ from src.networking.game_state import GameState
 
 class Connection(threading.Thread):
     def __init__(self, ip=None, port=None, upstream=None):
-        threading.Thread.__init__(self)
+        threading.Thread.__init__(self, daemon=True)
         self.threshold = None
         self.address = (ip, port)
         self.packet_handler = None
@@ -144,8 +144,8 @@ class MinecraftConnection(Connection):
         self.server_port = server_port
         self.listen_thread = listen_thread
 
-        # JoinGame, ServerDifficulty, SpawnPosition, Respawn, Experience, UpdateHealth
-        join_ids = [0x23, 0x0D, 0x46, Respawn.id, 0x40, 0x41]
+        # JoinGame, ServerDifficulty, SpawnPosition, Respawn, Experience
+        join_ids = [0x23, 0x0D, 0x46, Respawn.id, 0x40]
         self.game_state = GameState(join_ids)
 
         self.packet_processor = ClientboundProcessor(self.game_state)
