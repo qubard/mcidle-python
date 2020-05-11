@@ -9,8 +9,7 @@ class GameState:
         self.last_pitch = 0
         self.teleport_id = 0
 
-        self.gs_reason = 0
-        self.gs_value = 0.0
+        self.gamemode = None
 
         self.abilities = None
 

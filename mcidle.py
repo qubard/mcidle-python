@@ -12,6 +12,7 @@ parser.add_argument('--protocol', default=340, type=int, help='The protocol vers
 parser.add_argument('--username', help='Your Mojang account username (an email or legacy name)')
 parser.add_argument('--password', help='Your Mojang account password')
 parser.add_argument('--dport', default=1337, type=int, help='The port to connect to with mcidle (default=1337)')
+parser.add_argument('--reconnect', default=10, type=int, help='The reconnect rate in seconds')
 args = parser.parse_args()
 
 
@@ -54,20 +55,21 @@ def init():
     # Due to restarting the Minecraft client over and over
     # So when we reconnect we need to generate potentially new credentials to avoid session errors
     import time
-    reconnect_rate = 15
 
     while True:
         print("Trying to auth..", flush=True)
         credentials = try_auth(args.username, args.password)  # Make sure we can still auth
         print("Finished auth", flush=True)
         if credentials:
+            print("Starting..", flush=True)
             listen_thread.set_server(None)
             conn = MinecraftConnection(ip=args.ip, port=args.port, server_port=args.dport, protocol=args.protocol, \
                                        username=credentials['selectedProfile']['name'], profile=credentials, \
                                        listen_thread=listen_thread)
             conn.run_handler()
-            print("Disconnected..reconnecting in %s seconds" % reconnect_rate, flush=True)
-            time.sleep(reconnect_rate)
+            conn.stop()
+            print("Disconnected..reconnecting in %s seconds" % args.reconnect, flush=True)
+            time.sleep(args.reconnect)
             print("Reconnecting..", flush=True)
         else:
             if not args.username or not args.password:

@@ -1,6 +1,6 @@
 from src.networking.packets.packet import Packet
 from src.networking.types import String, VarIntPrefixedByteArray, VarInt, Integer, VarIntArray, \
-    Long, Byte, Double, Float, Boolean, UUID, Short
+    Long, Byte, Double, Float, Boolean, UUID, Short, UnsignedByte
 
 """
  Note: not using an OrderedDict for `definition` will break
@@ -116,6 +116,16 @@ class ChatMessage(Packet):
     }
 
 
+class Respawn(Packet):
+    id = 0x35
+    definition = {
+        "Dimension": Integer,
+        "Difficulty": UnsignedByte,
+        "Gamemode": UnsignedByte,
+        "LevelType": String,
+    }
+
+
 class PlayerPositionAndLook(Packet):
     id = 0x2F
     definition = {
@@ -132,7 +142,7 @@ class PlayerPositionAndLook(Packet):
 class GameState(Packet):
     id = 0x1E
     definition = {
-        "Reason": Byte,
+        "Reason": UnsignedByte,
         "Value": Float,
     }
 

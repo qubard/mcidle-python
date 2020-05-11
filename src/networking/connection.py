@@ -5,6 +5,7 @@ from .auth import Auth
 from src.networking.encryption import *
 from src.networking.packet_handler.serverbound import LoginHandler as ServerboundLoginHandler
 from src.networking.packet_handler.clientbound import LoginHandler as ClientboundLoginHandler
+from src.networking.packets.clientbound import Respawn
 
 from src.networking.packet_handler import WorkerProcessor, ClientboundProcessor
 
@@ -144,7 +145,7 @@ class MinecraftConnection(Connection):
         self.listen_thread = listen_thread
 
         # JoinGame, ServerDifficulty, SpawnPosition, Respawn, Experience, UpdateHealth
-        join_ids = [0x23, 0x0D, 0x46, 0x35, 0x40, 0x41]
+        join_ids = [0x23, 0x0D, 0x46, Respawn.id, 0x40, 0x41]
         self.game_state = GameState(join_ids)
 
         self.packet_processor = ClientboundProcessor(self.game_state)

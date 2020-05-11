@@ -1,7 +1,7 @@
 from src.networking.packets.serverbound import KeepAlive as KeepAliveServerbound, TeleportConfirm
 from src.networking.packets.clientbound import ChunkData, UnloadChunk, SpawnEntity, \
     DestroyEntities, KeepAlive, ChatMessage, PlayerPositionAndLook, TimeUpdate, \
-    HeldItemChange, SetSlot, PlayerListItem, PlayerAbilities
+    HeldItemChange, SetSlot, PlayerListItem, PlayerAbilities, Respawn
 
 from src.networking.packets.clientbound import GameState as GameStateP
 
@@ -96,8 +96,8 @@ class ClientboundProcessor(PacketProcessor):
                 self.game_state.held_item_slot = HeldItemChange().read(packet.packet_buffer).Slot
             elif packet.id == GameStateP.id:
                 game_state = GameStateP().read(packet.packet_buffer)
-                self.game_state.gs_reason = game_state.Reason
-                self.game_state.gs_value = game_state.Value
+                if game_state.Reason == 3: # Change Gamemode
+                    self.game_state.gamemode = game_state.Value
             elif packet.id == SetSlot.id:
                 set_slot = SetSlot().read(packet.packet_buffer)
                 self.game_state.main_inventory[set_slot.Slot] = packet
@@ -105,5 +105,9 @@ class ClientboundProcessor(PacketProcessor):
                 self.player_list(packet)
             elif packet.id == PlayerAbilities.id:
                 self.game_state.abilities = PlayerAbilities().read(packet.packet_buffer)
+            elif packet.id == Respawn.id:
+                # In case the gamemode is changed through a respawn packet
+                respawn = Respawn().read(packet.packet_buffer)
+                self.game_state.gamemode = respawn.Gamemode
 
         return None
