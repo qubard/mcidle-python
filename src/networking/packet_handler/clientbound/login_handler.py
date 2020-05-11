@@ -115,10 +115,13 @@ class LoginHandler(PacketHandler):
             # Send their last held item
             self.connection.send_packet_raw(HeldItemChangeClientbound(Slot=self.mc_connection.game_state.held_item_slot))
 
-            # Send their current gamemode
-            if self.mc_connection.game_state.gamemode:
+            # Send their current gamemode if it's defined
+            if self.mc_connection.game_state.gamemode is not None:
+                print("Sent gamemode", self.mc_connection.game_state.gamemode, flush=True)
                 self.connection.send_packet_raw(GameState(Reason=3,\
                                                         Value=self.mc_connection.game_state.gamemode))
+            else:
+                print("Gamemode not present", flush=True)
             # Send their inventory
             self.connection.send_single_packet_dict(self.mc_connection.game_state.main_inventory)
 

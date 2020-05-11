@@ -97,6 +97,7 @@ class ClientboundProcessor(PacketProcessor):
             elif packet.id == GameStateP.id:
                 game_state = GameStateP().read(packet.packet_buffer)
                 if game_state.Reason == 3: # Change Gamemode
+                    print("Set gamemode to ", game_state.Value, flush=True)
                     self.game_state.gamemode = game_state.Value
             elif packet.id == SetSlot.id:
                 set_slot = SetSlot().read(packet.packet_buffer)
@@ -109,11 +110,12 @@ class ClientboundProcessor(PacketProcessor):
                 # In case the gamemode is changed through a respawn packet
                 respawn = Respawn().read(packet.packet_buffer)
                 self.game_state.gamemode = respawn.Gamemode
+                print("Set gamemode to", respawn.Gamemode, flush=True)
             elif packet.id == UpdateHealth.id:
                 update_health = UpdateHealth().read(packet.packet_buffer)
                 self.game_state.update_health = update_health
                 # Respawn the player if they're dead..
-                print(update_health, flush=True)
+                print("Health: %s" % update_health.Health, flush=True)
                 if update_health.Health == 0:
                     print("Client died, respawning", flush=True)
                     return ClientStatus(ActionID=0)
