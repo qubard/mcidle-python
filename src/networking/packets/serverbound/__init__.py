@@ -70,10 +70,26 @@ class EncryptionResponse(Packet):
     }
 
 
+class ChatMessage(Packet):
+    id = 0x02
+    definition = {
+        "Message": String
+    }
+
+
 class ClientStatus(Packet):
     id = 0x03
     definition = {
         "ActionID": VarInt
+    }
+
+
+class PlayerLook(Packet):
+    id = 0x0F
+    definition = {
+        "Yaw": Float,
+        "Pitch": Float,
+        "OnGround": Boolean,
     }
 
 

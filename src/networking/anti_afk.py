@@ -1,7 +1,9 @@
 import threading
 import time
 
-from src.networking.packets.serverbound import Animation
+from src.networking.packets.serverbound import Animation, ChatMessage, PlayerLook
+
+from random import randint, uniform
 
 
 class AntiAFKThread(threading.Thread):
@@ -19,5 +21,11 @@ class AntiAFKThread(threading.Thread):
             if self.connection.game_state.received_position \
                     and not (self.connection.client_upstream and self.connection.client_upstream.connected()):
                 print("Sent AntiAFK packet", flush=True)
-                self.connection.send_packet(Animation(Hand=0))
+                # Try spamming /help
+                self.connection.send_packet(ChatMessage(Message="/help"))
+                # Swing arm randomly
+                self.connection.send_packet(Animation(Hand=randint(0, 1)))
+
+                # Look around
+                self.connection.send_packet(PlayerLook(Yaw=uniform(0, 360), Pitch=uniform(0, 360), OnGround=True))
             time.sleep(self.rate)
