@@ -77,6 +77,15 @@ class ChatMessage(Packet):
     }
 
 
+class EntityAction(Packet):
+    id = 0x15
+    definition = {
+        "EntityID": VarInt,
+        "ActionID": VarInt,
+        "JumpBoost": VarInt,
+    }
+
+
 class ClientStatus(Packet):
     id = 0x03
     definition = {

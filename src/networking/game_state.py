@@ -13,6 +13,8 @@ class GameState:
 
         self.abilities = None
 
+        self.player_pos = None
+
         self.state_lock = RLock()
 
         self.received_position = False
