@@ -171,6 +171,7 @@ class PlayerAbilities(Packet):
         "FOV": Float,
     }
 
+
 class PlayerListItem(Packet):
     id = 0x2E
     definition = {
