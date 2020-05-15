@@ -43,7 +43,7 @@ class ClientboundProcessor(PacketProcessor):
                     if uuid in self.game_state.packet_log:
                         del self.game_state.player_list[uuid]
                 elif player_list_item.Action == update_gamemode:
-                    self.game_state.player_pos[uuid] = packet
+                    self.game_state.player_list[uuid] = packet
 
     def spawn_entity(self, packet):
         spawn_entity = SpawnEntity().read(packet.packet_buffer)
