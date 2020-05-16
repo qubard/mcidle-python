@@ -2,7 +2,7 @@ from src.networking.packet_handler import PacketHandler
 from src.networking.packets.serverbound import Handshake, LoginStart, EncryptionResponse, ClientStatus, \
     PlayerPositionAndLook, TeleportConfirm, HeldItemChange, PlayerAbilities, PlayerPosition
 from src.networking.packets.clientbound import EncryptionRequest, SetCompression, \
-    TimeUpdate, GameState
+    TimeUpdate, GameState, LoginSuccess
 from src.networking.packets.clientbound import PlayerPositionAndLook as PlayerPositionAndLookClientbound
 from src.networking.packets.clientbound import HeldItemChange as HeldItemChangeClientbound
 from src.networking.packets.clientbound import PlayerAbilities as PlayerAbilitiesClientbound
@@ -178,7 +178,8 @@ class LoginHandler(PacketHandler):
                 self.connection.send_packet_raw(SetCompression(Threshold=self.mc_connection.compression_threshold))
                 self.connection.compression_threshold = self.mc_connection.compression_threshold
 
-            self.connection.send_packet_raw(self.mc_connection.login_success)
+            self.connection.send_packet_raw(LoginSuccess(Username=self.mc_connection.game_state.client_username, \
+                                                         UUID=self.mc_connection.game_state.client_uuid))
 
             print("Joining world", flush=True)
             self.join_world()

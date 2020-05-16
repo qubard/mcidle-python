@@ -64,16 +64,20 @@ class LoginHandler(PacketHandler):
             set_compression = SetCompression().read(unknown_packet)
             self.connection.compression_threshold = set_compression.Threshold
             print("Set compression threshold to %s" % self.connection.compression_threshold)
+
+            login_success = LoginSuccess().read(self.read_packet_from_stream().packet_buffer)
+
+            self.connection.game_state.client_uuid = login_success.UUID
+            self.connection.game_state.client_username = login_success.Username
+
+            print(login_success.UUID, login_success.Username, flush=True)
         except InvalidPacketID:
             print("Skipping compression..invalid compression packet")
             unknown_packet.reset_cursor()
             self.connection.compression_threshold = -1 # disabled
 
-        login_success = LoginSuccess().read(self.read_packet_from_stream().packet_buffer)
-
-        # Store their local uuid/username for use in PlayerList items
-        self.connection.game_state.client_uuid = login_success.UUID
-        self.connection.game_state.client_username = login_success.Username
+            self.connection.get_upstream().start()
+            return False
 
         self.connection.upstream.start()
         # Start listening for a connection only if we've officially connected
