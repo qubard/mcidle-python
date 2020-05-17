@@ -1,7 +1,7 @@
 from src.networking.packets.serverbound import KeepAlive as KeepAliveServerbound, TeleportConfirm, ClientStatus
 from src.networking.packets.clientbound import ChunkData, UnloadChunk, SpawnEntity, \
     DestroyEntities, KeepAlive, ChatMessage, PlayerPositionAndLook, TimeUpdate, \
-    HeldItemChange, SetSlot, PlayerListItem, PlayerAbilities, Respawn, UpdateHealth
+    HeldItemChange, SetSlot, PlayerListItem, PlayerAbilities, Respawn, UpdateHealth, JoinGame
 
 from src.networking.packets.clientbound import GameState as GameStateP
 
@@ -67,6 +67,16 @@ class ClientboundProcessor(PacketProcessor):
 
     def process_packet(self, packet):
         with self.game_state.state_lock:
+            if packet.id == Respawn.id:
+                # In case the gamemode is changed through a respawn packet
+                respawn = Respawn().read(packet.packet_buffer)
+                self.game_state.gamemode = respawn.Gamemode
+                print("Set gamemode to", respawn.Gamemode, flush=True)
+            if packet.id == JoinGame.id:
+                join_game = JoinGame().read(packet.packet_buffer)
+                self.game_state.gamemode = join_game.Gamemode & 3 # Bit 4 (0x8) is the hardcore flaga
+                print("Set gamemode to", self.game_state.gamemode, "JoinGame", flush=True)
+
             if packet.id in self.game_state.join_ids:
                 self.game_state.packet_log[packet.id] = packet
             elif packet.id == ChunkData.id:  # ChunkData
@@ -111,11 +121,6 @@ class ClientboundProcessor(PacketProcessor):
                 self.player_list(packet)
             elif packet.id == PlayerAbilities.id:
                 self.game_state.abilities = PlayerAbilities().read(packet.packet_buffer)
-            elif packet.id == Respawn.id:
-                # In case the gamemode is changed through a respawn packet
-                respawn = Respawn().read(packet.packet_buffer)
-                self.game_state.gamemode = respawn.Gamemode
-                print("Set gamemode to", respawn.Gamemode, flush=True)
             elif packet.id == UpdateHealth.id:
                 update_health = UpdateHealth().read(packet.packet_buffer)
                 self.game_state.update_health = update_health
@@ -124,5 +129,6 @@ class ClientboundProcessor(PacketProcessor):
                 if update_health.Health == 0:
                     print("Client died, respawning", flush=True)
                     return ClientStatus(ActionID=0)
+
 
         return None

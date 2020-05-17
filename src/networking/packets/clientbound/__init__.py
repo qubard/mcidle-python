@@ -49,6 +49,19 @@ class LoginSuccess(Packet):
     }
 
 
+class JoinGame(Packet):
+    id = 0x23
+    definition = {
+        "EntityID": Integer,
+        "Gamemode": UnsignedByte,
+        "Dimension": Integer,
+        "Difficulty": UnsignedByte,
+        "MaxPlayers": UnsignedByte,
+        "LevelType": String,
+        "Debug": Boolean,
+    }
+
+
 class SetCompression(Packet):
     id = 0x03
     definition = {
