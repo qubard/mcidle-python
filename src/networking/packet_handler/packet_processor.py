@@ -31,16 +31,19 @@ class ClientboundProcessor(PacketProcessor):
         player_list_item = PlayerListItem().read(packet.packet_buffer)
 
         add_player = 0
+        update_gamemode = 1
         remove_player = 4
 
-        if player_list_item.Action == add_player or player_list_item.Action == remove_player:
-            for player in player_list_item.Players:
-                uuid = player[0]
-                if player_list_item.Action == add_player:
-                    self.game_state.player_list[uuid] = packet
-                elif player_list_item.Action == remove_player:
-                    if uuid in self.game_state.packet_log:
-                        del self.game_state.player_list[uuid]
+        for player in player_list_item.Players:
+            uuid = player[0]
+            if uuid == self.game_state.client_uuid and player_list_item.Action == update_gamemode:
+                self.game_state.gamemode = player[1]
+
+            if player_list_item.Action == add_player:
+                self.game_state.player_list[uuid] = packet
+            elif player_list_item.Action == remove_player:
+                if uuid in self.game_state.packet_log:
+                    del self.game_state.player_list[uuid]
 
     def spawn_entity(self, packet):
         spawn_entity = SpawnEntity().read(packet.packet_buffer)
@@ -87,6 +90,8 @@ class ClientboundProcessor(PacketProcessor):
                 # Log the packet
                 self.game_state.packet_log[packet.id] = packet
                 self.game_state.received_position = True
+
+                self.game_state.player_pos = (pos_packet.X, pos_packet.Y, pos_packet.Z)
 
                 # Send back a teleport confirm
                 return TeleportConfirm(TeleportID=pos_packet.TeleportID)

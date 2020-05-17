@@ -1,8 +1,8 @@
 from src.networking.packet_handler import PacketHandler
 from src.networking.packets.serverbound import Handshake, LoginStart, EncryptionResponse, ClientStatus, \
-    PlayerPositionAndLook, TeleportConfirm, HeldItemChange, PlayerAbilities
+    PlayerPositionAndLook, TeleportConfirm, HeldItemChange, PlayerAbilities, PlayerPosition
 from src.networking.packets.clientbound import EncryptionRequest, SetCompression, \
-    TimeUpdate, GameState
+    TimeUpdate, GameState, LoginSuccess
 from src.networking.packets.clientbound import PlayerPositionAndLook as PlayerPositionAndLookClientbound
 from src.networking.packets.clientbound import HeldItemChange as HeldItemChangeClientbound
 from src.networking.packets.clientbound import PlayerAbilities as PlayerAbilitiesClientbound
@@ -46,20 +46,27 @@ class LoginHandler(PacketHandler):
         self.mc_connection.game_state.release()
 
     def handle_position(self, packet):
-        if packet.id != PlayerPositionAndLook.id:
-            return
+        if packet.id == PlayerPositionAndLook.id:
+            pos_packet = PlayerPositionAndLook().read(packet.packet_buffer)
 
-        pos_packet = PlayerPositionAndLook().read(packet.packet_buffer)
+            self.mc_connection.game_state.acquire()
 
-        self.mc_connection.game_state.acquire()
+            self.mc_connection.game_state.last_yaw = pos_packet.Yaw
+            self.mc_connection.game_state.last_pitch = pos_packet.Pitch
+            self.mc_connection.game_state.player_pos = (pos_packet.X, pos_packet.Y, pos_packet.Z)
 
-        self.mc_connection.game_state.last_yaw = pos_packet.Yaw
-        self.mc_connection.game_state.last_pitch = pos_packet.Pitch
+            # Replace the currently logged PlayerPositionAndLookClientbound packet
+            self.mc_connection.game_state.last_pos_packet = pos_packet
 
-        # Replace the currently logged PlayerPositionAndLookClientbound packet
-        self.mc_connection.game_state.last_pos_packet = pos_packet
+            self.mc_connection.game_state.release()
+        elif packet.id == PlayerPosition.id:
+            pos_packet = PlayerPosition().read(packet.packet_buffer)
 
-        self.mc_connection.game_state.release()
+            self.mc_connection.game_state.acquire()
+
+            self.mc_connection.game_state.player_pos = (pos_packet.X, pos_packet.Y, pos_packet.Z)
+
+            self.mc_connection.game_state.release()
 
     def join_world(self):
         # If there's an exception releasing a lock actually happens this way
@@ -171,7 +178,8 @@ class LoginHandler(PacketHandler):
                 self.connection.send_packet_raw(SetCompression(Threshold=self.mc_connection.compression_threshold))
                 self.connection.compression_threshold = self.mc_connection.compression_threshold
 
-            self.connection.send_packet_raw(self.mc_connection.login_success)
+            self.connection.send_packet_raw(LoginSuccess(Username=self.mc_connection.game_state.client_username, \
+                                                         UUID=self.mc_connection.game_state.client_uuid))
 
             print("Joining world", flush=True)
             self.join_world()

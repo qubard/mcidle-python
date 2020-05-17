@@ -11,7 +11,12 @@ class GameState:
 
         self.gamemode = None
 
+        self.client_uuid = None
+        self.client_username = None
+
         self.abilities = None
+
+        self.player_pos = None
 
         self.state_lock = RLock()
 
