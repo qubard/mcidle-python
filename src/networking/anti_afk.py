@@ -27,9 +27,18 @@ class AntiAFKThread(threading.Thread):
                 self.connection.send_packet(Animation(Hand=randint(0, 1)))
 
                 if self.connection.game_state.player_pos:
-                    for off in range(0, 5):
+                    # Move 3 blocks ahead and back
+                    for off in range(0, 30):
                         pos = self.connection.game_state.player_pos
-                        self.connection.send_packet(PlayerPosition(X=pos[0], Y=pos[1] + 0.1*off, Z=pos[2], OnGround=False))
+                        self.connection.send_packet(PlayerPosition(X=pos[0] + 0.1 * off, \
+                                                                   Y=pos[1] + 0.1, Z=pos[2], OnGround=True))
+                        time.sleep(0.1)
+
+                    for off in range(30, 0, -1):
+                        pos = self.connection.game_state.player_pos
+                        self.connection.send_packet(PlayerPosition(X=pos[0] + 0.1 * off, \
+                                                                   Y=pos[1] + 0.1, Z=pos[2], OnGround=True))
+                        time.sleep(0.1)
 
                 print(self.connection.game_state.player_pos, flush=True)
 

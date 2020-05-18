@@ -67,6 +67,8 @@ optional arguments:
 
 - Since Python is slow, reading from a buffer/passing chunks to be processed is slow which can halt the processing of KeepAlives which means that the player can disconnect randomly. The only real solution to this is dedicating a separate thread just to KeepAlives or converting this to C/C++. This would depend on how fast the server you run mcidle on is though, in practice on an Intel i7 8700k I did not have any issues in a single threaded setup.
 
+- Anti AFK is broken on certain servers. Currently moves you 3 blocks in the X direction and 3 blocks back
+
 - In past versions we used multiple threads for worker loggers with Python's `multiprocessing` library, but this actually slowed down the program significantly due to the huge cost of acquiring a lock on dictionary objects so by default now we use 1 thread for packet processing and a synchronized queue to avoid heavy lock hits
 
 - On some windows installs (Windows 10) you may not be able to install the `cryptography` package. This is because `cryptography` was not compiled for 3.8+. Install `python3.7` or below (preferably `3.6.8`) and try again.
