@@ -67,7 +67,7 @@ optional arguments:
 
 - Since Python is slow, reading from a buffer/passing chunks to be processed is slow which can halt the processing of KeepAlives which means that the player can disconnect randomly. The only real solution to this is dedicating a separate thread just to KeepAlives or converting this to C/C++. This would depend on how fast the server you run mcidle on is though, in practice on an Intel i7 8700k I did not have any issues in a single threaded setup.
 
-- Anti AFK is broken on certain servers. Currently moves you 3 blocks in the X direction and 3 blocks back
+- Anti AFK is broken on certain servers. Currently moves you 3 blocks in the X direction and 3 blocks back. I would recommend using an anti-afk pool until this is fixed
 
 - In past versions we used multiple threads for worker loggers with Python's `multiprocessing` library, but this actually slowed down the program significantly due to the huge cost of acquiring a lock on dictionary objects so by default now we use 1 thread for packet processing and a synchronized queue to avoid heavy lock hits
 
@@ -83,11 +83,3 @@ optional arguments:
 - If you run this on some VPS providers your ip range might be blocked and you won't be able to connect
 
 - Since you don't move while idling if someone digs blocks underneath you and makes the game think you're falling you can be kicked for flying
-
-# TODOs
-- Avoid destroying/recreating threads since it is very bug prone
-- handle `UpdateBlockEntity`
-- handle chunks and various mob entities
-- test out other versions (version support)
-- version number files, somehow? player shouldn't have to worry about versions messing up
-- basic TravisCI integration with a test suite
