@@ -12,6 +12,7 @@ parser.add_argument('--protocol', default=340, type=int, help='The protocol vers
 parser.add_argument('--username', help='Your Mojang account username (an email or legacy name)')
 parser.add_argument('--password', help='Your Mojang account password')
 parser.add_argument('--dport', default=1337, type=int, help='The port to connect to with mcidle (default=1337)')
+parser.add_argument('--bindip', default='', help='The IP to bind to with mcidle')
 parser.add_argument('--reconnect', default=10, type=int, help='The reconnect rate in seconds')
 args = parser.parse_args()
 
@@ -51,7 +52,7 @@ def init():
         raise RuntimeError("Please specify an ip address!")
 
     # We use this to listen for incoming connections
-    listen_thread = ListenThread(address=('', args.dport))
+    listen_thread = ListenThread(address=(args.bindip, args.dport))
     listen_thread.start()
 
     # We do this loop because the session information may be invalidated at any point
