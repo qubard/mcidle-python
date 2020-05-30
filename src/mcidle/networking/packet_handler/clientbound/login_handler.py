@@ -1,13 +1,16 @@
-from src.networking.packet_handler import PacketHandler
-from src.networking.packets.serverbound import Handshake, LoginStart, EncryptionResponse, ClientStatus, \
+from mcidle.networking.packet_handler import PacketHandler
+from mcidle.networking.packets.serverbound import (
+    Handshake, LoginStart, EncryptionResponse, ClientStatus,
     PlayerPositionAndLook, TeleportConfirm, HeldItemChange, PlayerAbilities, PlayerPosition
-from src.networking.packets.clientbound import EncryptionRequest, SetCompression, \
-    TimeUpdate, GameState, LoginSuccess
-from src.networking.packets.clientbound import PlayerPositionAndLook as PlayerPositionAndLookClientbound
-from src.networking.packets.clientbound import HeldItemChange as HeldItemChangeClientbound
-from src.networking.packets.clientbound import PlayerAbilities as PlayerAbilitiesClientbound
+)
+from mcidle.networking.packets.clientbound import (
+    EncryptionRequest, SetCompression, TimeUpdate, GameState, LoginSuccess
+)
+from mcidle.networking.packets.clientbound import PlayerPositionAndLook as PlayerPositionAndLookClientbound
+from mcidle.networking.packets.clientbound import HeldItemChange as HeldItemChangeClientbound
+from mcidle.networking.packets.clientbound import PlayerAbilities as PlayerAbilitiesClientbound
 
-from src.networking.packets.exceptions import InvalidPacketID
+from mcidle.networking.packets.exceptions import InvalidPacketID
 
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives.asymmetric import rsa

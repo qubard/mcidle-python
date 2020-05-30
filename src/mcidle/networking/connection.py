@@ -2,16 +2,20 @@ import socket
 import threading
 
 from .auth import Auth
-from src.networking.encryption import *
-from src.networking.packet_handler.serverbound import LoginHandler as ServerboundLoginHandler
-from src.networking.packet_handler.clientbound import LoginHandler as ClientboundLoginHandler
-from src.networking.packets.clientbound import Respawn, JoinGame
 
-from src.networking.packet_handler import WorkerProcessor, ClientboundProcessor
+from .encryption import (
+    EncryptedFileObjectWrapper, EncryptedSocketWrapper, create_AES_cipher
+)
 
-from src.networking.upstream import UpstreamThread
-from src.networking.anti_afk import AntiAFKThread
-from src.networking.game_state import GameState
+from .packet_handler.serverbound import LoginHandler as ServerboundLoginHandler
+from .packet_handler.clientbound import LoginHandler as ClientboundLoginHandler
+from .packets.clientbound import Respawn, JoinGame
+
+from .packet_handler import WorkerProcessor, ClientboundProcessor
+
+from .upstream import UpstreamThread
+from .anti_afk import AntiAFKThread
+from .game_state import GameState
 
 
 class Connection(threading.Thread):
@@ -24,7 +28,7 @@ class Connection(threading.Thread):
         self.socket = None
         self.stream = None
 
-        self.upstream_lock = RLock()
+        self.upstream_lock = threading.RLock()
         self.upstream = upstream
 
         self.compression_threshold = None
@@ -153,7 +157,7 @@ class MinecraftConnection(Connection):
         self.client_connection = None
 
         self.local_client_upstream = None
-        self.client_upstream_lock = RLock()
+        self.client_upstream_lock = threading.RLock()
 
         # Keeping the child server's upstream alive as long as possible prevents the BrokenPipeError bug
         # So pass it in as a construction argument instead of something it spawns itself

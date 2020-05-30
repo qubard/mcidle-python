@@ -1,7 +1,7 @@
 from zlib import decompress
-from src.networking.types import VarInt
-from src.networking.packets.packet_buffer import PacketBuffer
-from src.networking.packets.packet import Packet
+from mcidle.networking.types import VarInt
+from mcidle.networking.packets.packet_buffer import PacketBuffer
+from mcidle.networking.packets.packet import Packet
 
 
 class PacketHandler:

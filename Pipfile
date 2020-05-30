@@ -1,0 +1,16 @@
+[[source]]
+name = "pypi"
+url = "https://pypi.org/simple"
+verify_ssl = true
+
+[dev-packages]
+setuptools-scm = {extras = ["toml"], version = "*"}
+
+[packages]
+cryptography = "==2.4.2"
+requests = "==2.20.1"
+NBT = "==1.5.0"
+mcidle = {editable = true, path = "."}
+
+[requires]
+python_version = "3.8"

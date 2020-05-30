@@ -1,13 +1,12 @@
-from src.networking.connection import MinecraftConnection
-from src.networking.listen_thread import ListenThread
-from src.networking.auth import Auth
-
 import argparse
 
+from mcidle.networking.auth import Auth
+from mcidle.networking.listen_thread import ListenThread
+from mcidle.networking.connection import MinecraftConnection
 
 parser = argparse.ArgumentParser(add_help=True)
 parser.add_argument('--ip', help='The ip address of the server to connect to (e.g localhost)')
-parser.add_argument('--port', default=25565, help='The port of the server to connect to (default=25565)')
+parser.add_argument('--port', default=25565, type=int, help='The port of the server to connect to (default=25565)')
 parser.add_argument('--protocol', default=340, type=int, help='The protocol version of the server to connect to (default=340)')
 parser.add_argument('--username', help='Your Mojang account username (an email or legacy name)')
 parser.add_argument('--password', help='Your Mojang account password')
@@ -47,7 +46,7 @@ def try_auth(username, password):
     return credentials
 
 
-def init():
+def main():
     if args.ip is None:
         raise RuntimeError("Please specify an ip address!")
 
@@ -86,5 +85,6 @@ def init():
             print("Username or password wrong, waiting 15 seconds before reconnecting..")
             time.sleep(15)
 
+
 if __name__ == '__main__':
-    init()
+    main()

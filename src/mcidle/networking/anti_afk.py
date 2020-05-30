@@ -1,7 +1,7 @@
 import threading
 import time
 
-from src.networking.packets.serverbound import Animation, ChatMessage, PlayerLook, PlayerPosition
+from mcidle.networking.packets.serverbound import Animation, ChatMessage, PlayerLook, PlayerPosition
 
 from random import randint, uniform
 

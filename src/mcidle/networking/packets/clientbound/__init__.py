@@ -1,5 +1,5 @@
-from src.networking.packets.packet import Packet
-from src.networking.types import String, VarIntPrefixedByteArray, VarInt, Integer, VarIntArray, \
+from mcidle.networking.packets.packet import Packet
+from mcidle.networking.types import String, VarIntPrefixedByteArray, VarInt, Integer, VarIntArray, \
     Long, Byte, Double, Float, Boolean, UUID, Short, UnsignedByte
 
 """
