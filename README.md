@@ -22,9 +22,19 @@ Make sure you connect with the exact game version that matches the mcidle server
 
 # Installation Guide
 
-Run `python -m pip install -U pip` and then `pip install -r requirements.txt` in the `mcidle-python` directory. Please note that you do need `python3.7` or below.
+You will need [pipx](https://github.com/pipxproject/pipx) to install this. 
 
-A simple way to run it in the background of a server is to use `nohup python3 mcidle.py > output.log &`. To terminate, run `pkill python` which will kill all running instances of python.
+Run
+
+```
+pipx install git+https://github.com/qubard/mcidle-python.git
+```
+
+to install the application. If you're on Windows you may have to restart your command line.
+
+Then `mcidle` should be an available command in your command line on Mac, Windows or Linux.
+
+A simple way to run it in the background of a server is to use `nohup mcidle > output.log &` (with flags). To terminate, run `pkill python` which will kill all running instances of python.
 
 # Notes
 
@@ -40,27 +50,30 @@ If you keep on logging in too fast (re-updating credentials) you might get an "i
 
 # Example Usage
 
-Run `python3 mcidle.py --username=example@example.com --password=pw123 --ip=2b2t.org` to point mcidle to `2b2t.org` and listen on `localhost:1337` with the login information `example@example.com` and password `pw123`.
+Run `mcidle --username=example@example.com --password=pw123 --ip=2b2t.org` to point mcidle to `2b2t.org` and listen on `localhost:1337` with the login information `example@example.com` and password `pw123`.
 
 Connecting to `localhost:1337` with your Minecraft client will let you resume your connection to `2b2t.org`. You can change the port at any time by changing the `dport` flag.
 
-Run `python3 mcidle.py --help` for additional instructions on how to use the command-line utility.
+Run `mcidle --help` for additional instructions on how to use the command-line utility.
 
 ```
-usage: mcidle.py [-h] [--ip IP] [--port PORT] [--protocol PROTOCOL]
-               [--username USERNAME] [--password PASSWORD] [--dstport DSTPORT]
+usage: mcidle.exe [-h] [--ip IP] [--port PORT] [--protocol PROTOCOL]
+                  [--username USERNAME] [--password PASSWORD] [--dport DPORT]
+                  [--bindip BINDIP] [--reconnect RECONNECT]
 
 optional arguments:
-  -h, --help           show this help message and exit
-  --ip IP              The ip address of the server to connect to (e.g
-                       localhost)
-  --port PORT          The port of the server to connect to (default=25565)
-  --protocol PROTOCOL  The protocol version of the server to connect to
-                       (default=340)
-  --username USERNAME  Your Mojang account username (an email or legacy name)
-  --password PASSWORD  Your Mojang account password
-  --dport DPORT    The port that mcidle listens on (default=1337)
-
+  -h, --help            show this help message and exit
+  --ip IP               The ip address of the server to connect to (e.g
+                        localhost)
+  --port PORT           The port of the server to connect to (default=25565)
+  --protocol PROTOCOL   The protocol version of the server to connect to
+                        (default=340)
+  --username USERNAME   Your Mojang account username (an email or legacy name)
+  --password PASSWORD   Your Mojang account password
+  --dport DPORT         The port to connect to with mcidle (default=1337)
+  --bindip BINDIP       The IP to bind to with mcidle
+  --reconnect RECONNECT
+                        The reconnect rate in seconds
 ```
 
 # Known Issues
