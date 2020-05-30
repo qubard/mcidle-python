@@ -1,8 +1,8 @@
-from src.networking.packets.serverbound import Handshake, LoginStart, EncryptionResponse
-from src.networking.packets.clientbound import EncryptionRequest, SetCompression, LoginSuccess
-from src.networking.encryption import *
-from src.networking.packet_handler import PacketHandler
-from src.networking.packets.exceptions import InvalidPacketID
+from mcidle.networking.encryption import encrypt_token_and_secret, generate_verification_hash, generate_shared_secret
+from mcidle.networking.packets.serverbound import Handshake, LoginStart, EncryptionResponse
+from mcidle.networking.packets.clientbound import EncryptionRequest, SetCompression, LoginSuccess
+from mcidle.networking.packet_handler import PacketHandler
+from mcidle.networking.packets.exceptions import InvalidPacketID
 
 from .idle_handler import IdleHandler
 

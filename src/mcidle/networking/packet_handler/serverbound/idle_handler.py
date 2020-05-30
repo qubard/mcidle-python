@@ -1,5 +1,5 @@
-from src.networking.packet_handler import PacketHandler
-from src.networking.packets.clientbound import KeepAlive
+from mcidle.networking.packet_handler import PacketHandler
+from mcidle.networking.packets.clientbound import KeepAlive
 
 import select
 

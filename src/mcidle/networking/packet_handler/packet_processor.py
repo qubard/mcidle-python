@@ -1,9 +1,9 @@
-from src.networking.packets.serverbound import KeepAlive as KeepAliveServerbound, TeleportConfirm, ClientStatus
-from src.networking.packets.clientbound import ChunkData, UnloadChunk, SpawnEntity, \
+from mcidle.networking.packets.serverbound import KeepAlive as KeepAliveServerbound, TeleportConfirm, ClientStatus
+from mcidle.networking.packets.clientbound import ChunkData, UnloadChunk, SpawnEntity, \
     DestroyEntities, KeepAlive, ChatMessage, PlayerPositionAndLook, TimeUpdate, \
     HeldItemChange, SetSlot, PlayerListItem, PlayerAbilities, Respawn, UpdateHealth, JoinGame
 
-from src.networking.packets.clientbound import GameState as GameStateP
+from mcidle.networking.packets.clientbound import GameState as GameStateP
 
 
 class PacketProcessor:
