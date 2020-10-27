@@ -7,7 +7,7 @@ verify_ssl = true
 setuptools-scm = {extras = ["toml"], version = "*"}
 
 [packages]
-cryptography = "==2.4.2"
+cryptography = "==3.2"
 requests = "==2.20.1"
 NBT = "==1.5.0"
 mcidle = {editable = true, path = "."}
