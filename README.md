@@ -1,4 +1,7 @@
 # mcidle-python
+
+***NOTE: This project is no longer maintained. Find the [new version with more features/support here.](https://github.com/qubard/mcidle-cpp). ***
+
 An idling cli for Minecraft that tunnels your connection to a Minecraft server allowing you to disconnect at any point but remain connected to the server through `mcidle`.
 
 [Watch a demo here!](https://youtu.be/r26vacizGJw)
